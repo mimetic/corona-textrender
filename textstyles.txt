@@ -1,0 +1,50 @@
+# style = font, size, leading, R,G,B, width, opacity, NORMAL|ALL_CAPS, text alignment, spaceBefore, spaceAfter, firstLineIndent, leftIndent, rightIndent
+
+#generic styles
+Normal = Avenir-Book,16,20,255,20,20,,100%
+Heading 1 = Avenir-Bold,16,20,20,255,20,,100%
+Title=Avenir-Light,34,50,180,180,180,,100%,NORMAL,left,0,0,0,0,0
+H1=,18,26,0,0,0,,100%,NORMAL,left,12,4,0,0,0
+H2=Avenir-Book,18,26,0,0,0,,100%,NORMAL,left,12,4,0,0,0
+H2 Light=Avenir-Book,18,26,220,220,220,,100%,NORMAL,left,12,4,0,0,0
+H3=,16,26,0,0,0,,100%,NORMAL,left,8,0,0,0,0
+H4=,16,26,0,0,0,,100%,NORMAL,left,8,0,0,0,0
+H6=,16,26,0,0,0,,100%,NORMAL,left,8,0,0,0,0
+H5=,16,26,0,0,0,,100%,NORMAL,left,8,0,0,0,0
+Quote = Avenir-Light,20,28,200,255,20,,100%
+
+# styles for the library
+eventListRowTime=AvenirNextCondensed-Medium,16,16,80,120,120,,100%,NORMAL,right,0,-20,0,0,0
+eventListRowTitle=AvenirNext-Medium,20,26,0,0,0,,100%,NORMAL,left,0,30,0,0,0
+eventListRowAuthor=Avenir-Light,14,14,160,160,160,,100%,NORMAL,left,0,14,0,0,0
+eventListRowDate=Avenir-Light,16,20,0,0,0,,100%,NORMAL,left,0,0,0,0,0
+eventListRowBody=Avenir-Book,14,22,100,100,100,,100%,NORMAL,left,0,0,0,0,0
+
+eventPageTitle=AvenirNext-Medium,36,40,0,0,0,,100%,NORMAL,left,0,20,0,0,0
+eventPageAuthor=Avenir-Light,18,22,0,0,0,,100%,NORMAL,left,0,10,0,0,0
+eventPageDate=Avenir-Light,16,20,0,0,0,,100%,NORMAL,left,0,10,0,0,0
+eventPageBody=Avenir-Light,16,24,0,0,0,,100%,NORMAL,left,0,0,0,0,0
+
+# styles for the settings screen
+settingsTitle=Avenir-Heavy,24,30,100,100,100,,100%,NORMAL,center,0,0,0,0,0
+settingsBody=Avenir-Light,18,24,60,60,60,,100%,NORMAL,left,0,24,0,0,0
+settingsLabel=Avenir-Medium,18,24,60,60,60,,100%,NORMAL,left,0,24,0,0,0
+
+# styles for captions
+caption=Avenir-Book,14,24,0,0,0,,100%,NORMAL,left,0,14,0,0,0
+caption-title=Avenir-Book,14,24,0,0,0,,100%,NORMAL,left,0,14,0,0,0
+
+#styles for table of contents
+contents-item = Avenir-Light,18,24,60,60,60,,100%,NORMAL,left,0,24,0,0,0
+
+# styles for the dialog screen
+dialogTitle=Avenir-Heavy,24,30,100,100,100,,100%,NORMAL,center,0,0,0,0,0
+dialogBody=Avenir-Light,16,24,60,60,60,,100%,NORMAL,left,0,24,0,0,0
+dialogLabel=Avenir-Medium,16,24,60,60,60,,100%,NORMAL,left,0,24,0,0,0
+dialogDescription=Avenir-Medium,16,20,100,100,120,,100%,NORMAL,left,0,12,0,0,0
+dialogLargeDescription=Avenir-Medium,18,24,60,60,60,,100%,NORMAL,left,0,12,0,0,0
+
+# testing styles
+Left = Baskerville,16,24, 0,0,0,,100%,NORMAL, left,0,0,0,40,40
+Right = Baskerville,16,24,0,0,0,,100%,NORMAL,right,0,0,0,40,40
+Center = Baskerville,16,24,0,0,0,,100%,NORMAL,center,0,0,0,0,0
