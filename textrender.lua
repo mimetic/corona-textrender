@@ -41,6 +41,8 @@
 
 ]]
 
+print ("THIS IS A TEST OF USING GIT")
+
 
 -- TESTING
 local testing = false
