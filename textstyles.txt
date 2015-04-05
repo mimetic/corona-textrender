@@ -2,8 +2,8 @@
 
 #generic styles
 Normal = Avenir-Book,16,20,0,0,0,,100%
-Heading 1 = Avenir-Bold,16,20,20,255,20,,100%
-Title=Avenir-Light,34,50,180,180,180,,100%,NORMAL,left,0,0,0,0,0
+Heading = Avenir-Bold,16,20,20,255,20,,100%
+Title=Avenir-Light,24,40,180,180,180,,100%,NORMAL,left,10,6,0,0,0
 H1=,18,26,0,0,0,,100%,NORMAL,left,12,4,0,0,0
 H2=Avenir-Book,18,26,0,0,0,,100%,NORMAL,left,12,4,0,0,0
 H2 Light=Avenir-Book,18,26,220,220,220,,100%,NORMAL,left,12,4,0,0,0

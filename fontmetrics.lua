@@ -74,7 +74,7 @@ local function loadMetricsFromFile (metricsfile, fontfacesfile, path)
 	local metricsPacked = {}
 	local variations = {}
 
-	metricsfile = metricsfile or "fontmetrics.txt"
+	metricsfile = metricsfile or "scripts/textrender/fontmetrics.txt"
 
 	if (metricsfile) then
 		path = path or system.SystemDirectory
@@ -173,7 +173,7 @@ local function loadMetricsFromFile (metricsfile, fontfacesfile, path)
 
 	------------
 	-- Get font transformation names, e.g. myfont-italic
-	fontfacesfile = fontfacesfile or "fontvariations.txt"
+	fontfacesfile = fontfacesfile or "scripts/textrender/fontvariations.txt"
 
 	if (fontfacesfile) then
 		path = path or system.SystemDirectory
@@ -192,8 +192,8 @@ end
 function FM.new(metricsfile, fontfacesfile)
 	local M = {}
 
-	metricsfile = metricsfile or "fontmetrics.txt"
-	fontfacesfile = fontfacesfile or "fontvariations.txt"
+	metricsfile = metricsfile or "scripts/textrender/fontmetrics.txt"
+	fontfacesfile = fontfacesfile or "scripts/textrender/fontvariations.txt"
 	local metrics = loadMetricsFromFile(metricsfile, fontfacesfile)
 
 	M.metrics = metrics

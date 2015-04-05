@@ -2,7 +2,7 @@
 
 module(..., package.seeall)
 
-local entities = require ("entities")
+local entities = require ("scripts.textrender.entities")
 
 
 local entity = {
@@ -56,7 +56,7 @@ local inline = {
 	"var",
 }
 
-tags = {
+local tags = {
 	a = { empty = false },
 	abbr = {empty = false} ,
 	acronym = {empty = false} ,

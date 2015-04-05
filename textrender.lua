@@ -55,8 +55,10 @@ local T = {}
 
 
 local funx = require ("funx")
-local html = require ("html")
-local entities = require ("entities")
+
+local html = require ("scripts.textrender.html")
+local entities = require ("scripts.textrender.entities")
+local fontMetricsLib = require("scripts.textrender.fontmetrics")
 
 local sqlite3 = require "sqlite3"
 local json = require("json")
@@ -122,7 +124,6 @@ local usePeriodsForLineBeginnings = false
 -- variations, for knowing the names of font variations, e.g. italic
 -- Corona doesn't do this so we must.
 -------------------------------------------------
-local fontMetricsLib = require("fontmetrics")
 local fontMetrics = fontMetricsLib.new()
 local fontFaces = fontMetrics.metrics.variations or {}
 
