@@ -1,8 +1,8 @@
--- textwrap.lua
+-- textrender.lua
 --
--- Version 3.0
+-- Version 3.1
 --
--- Copyright (C) 2014 David I. Gross. All Rights Reserved.
+-- Copyright (C) 2015 David I. Gross. All Rights Reserved.
 --
 -- This software is is protected by the author's copyright, and may not be used, copied,
 -- modified, merged, published, distributed, sublicensed, and/or sold, without
