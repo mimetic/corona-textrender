@@ -1,3 +1,5 @@
+# TEXT STYLES FOR CORONA GRAPHICS v2 (values between 0-1)
+
 # style = font, size, leading, R,G,B, width, opacity, NORMAL|ALL_CAPS, text alignment, spaceBefore, spaceAfter, firstLineIndent, leftIndent, rightIndent
 
 #generic styles
