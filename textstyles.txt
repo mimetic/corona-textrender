@@ -3,7 +3,7 @@
 #generic styles
 Normal = Avenir-Book,16,20,0,0,0,,100%
 Heading = Avenir-Bold,16,20,0,0,0,,100%
-Title=Avenir-Light,24,40,0.5,0.5,0.5,,100%,NORMAL,left,10,6,0,0,0
+Title=Avenir-Light,24,40,1,0.5,0.5,,100%,NORMAL,left,10,6,0,0,0
 H1=,18,26,0,0,0,,100%,NORMAL,left,12,4,0,0,0
 H2=Avenir-Book,18,26,0,0,0,,100%,NORMAL,left,12,4,0,0,0
 H2 Light=Avenir-Book,18,26,220,220,220,,100%,NORMAL,left,12,4,0,0,0
