@@ -45,6 +45,6 @@ dialogDescription=Avenir-Medium,16,20,100,100,120,,100%,NORMAL,left,0,12,0,0,0
 dialogLargeDescription=Avenir-Medium,18,24,60,60,60,,100%,NORMAL,left,0,12,0,0,0
 
 # testing styles
-Left = Baskerville,16,24, 0,0,0,,100%,NORMAL, left,0,0,0,40,40
-Right = Baskerville,16,24,0,0,0,,100%,NORMAL,right,0,0,0,40,40
+Left = Baskerville,16,24, 0,0,0,,100%,NORMAL, left,0,0,0,0,0
+Right = Baskerville,16,24,0,0,0,,100%,NORMAL,right,0,0,0,0,0
 Center = Baskerville,16,24,0,0,0,,100%,NORMAL,center,0,0,0,0,0
