@@ -52,16 +52,16 @@ end
 -- Main var for this module
 local T = {}
 
-
-local funx = require ("funx")
+-- funx must be installed in scripts folder
+local funx = require ("scripts.funx")
 
 local html = require ("scripts.textrender.html")
 local entities = require ("scripts.textrender.entities")
 local fontMetricsLib = require("scripts.textrender.fontmetrics")
 
-local sqlite3 = require "sqlite3"
-local json = require("json")
-local crypto = require "crypto"
+local sqlite3 = require ( "sqlite3" )
+local json = require( "json" )
+local crypto = require ( "crypto" )
 
 
 
