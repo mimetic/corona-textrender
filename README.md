@@ -77,6 +77,18 @@ Here are some options that I started work on but never finished or found no curr
 ## Code Example
 
 ```
+-- Load the module
+local funx = require("scripts.funx")
+local textrender = require("scripts.textrender.textrender")
+local textStyles = funx.loadTextStyles("scripts/textrender/textstyles.txt", system.ResourceDirectory)
+
+------------
+-- For TESTING, we clear text caches so we can see changes to our code and texts.
+-- We clear the cache before begining, so first render creates a cache, second uses it.
+textrender.clearAllCaches(cacheDir)
+
+------------
+-- Sample text
 local mytext = [[
 <p class="Left" >
 	Hit events propagate until they are <b>handled.</b> This means that if you have <i>multiple objects overlaying</i> each other in the display hierarchy, and a hit event listener has been applied to each, the <i>hit event will propagate through all of these objects.</i> 
@@ -102,8 +114,8 @@ local options = {
 	minWordLen = 2, - Minimum length of a word shown at the end of a line, e.g. don't end lines with "a".
 	textstyles = textStyles, -- styles table, loaded using funx.loadTextStyles
 	defaultStyle = "Normal", -- default style (from textstyles.txt) for text
-	cacheDir = cacheDir, -- Set to cache directory name to use json file caching (slow)
 	cacheToDB = true, -- default is true, set to false for no caching, uses sqlite3 caching (faster)
+	cacheDir = nil, -- Set to cache directory name to use json file caching (slow)
 	handler = handler,  -- a function that will accept a 'tap' event
 	hyperlinkFillColor = hyperlinkFillColor, -- an RGBa color in a string, like this: "200,120,255,100"
 	hyperlinkTextColor = hyperlinkTextColor, -- an RGBa color in a string, like this: "200,120,255,100"
@@ -112,6 +124,38 @@ local options = {
 	testing = false, -- [boolean] True for testing, shows borders and colors.
 }
 local textblock = textwrap.autoWrappedText( options )
+```
+
+
+## Style Sheets
+The module uses style sheets of predefined styles. It does render many HTML attributes, such as color and fontsize, so a great deal of HTML will work without change.
+
+You load the style sheet before calling the textrender() function. This way, you only need to load it once, and that's faster.
+
+A stylesheet is a simple format. Each style is a line, beginning with a name, like this:
+
+    style = font, size, leading, R,G,B, width, opacity, NORMAL|ALL_CAPS, text alignment, spaceBefore, spaceAfter, firstLineIndent, leftIndent, rightIndent
+
+Use a '#' to comment a line.
+
+Here is an example (note the colors use the 2.0 version of Corona with values between 0 and 1):
+```
+# TEXT STYLES FOR CORONA GRAPHICS v2 (values between 0-1)
+
+# style = font, size, leading, R,G,B, width, opacity, NORMAL|ALL_CAPS, text alignment, spaceBefore, spaceAfter, firstLineIndent, leftIndent, rightIndent
+
+#generic styles
+Normal = Avenir-Book,16,20,0,0,0,,100%
+Heading = Avenir-Bold,16,20,0,0,0,,100%
+Title=Avenir-Light,24,40,0.5,0.5,0.5,,100%,NORMAL,left,10,6,0,0,0
+H1=,18,26,0,0,0,,100%,NORMAL,left,12,4,0,0,0
+H2=Avenir-Book,18,26,0,0,0,,100%,NORMAL,left,12,4,0,0,0
+H2 Light=Avenir-Book,18,26,220,220,220,,100%,NORMAL,left,12,4,0,0,0
+H3=,16,26,0,0,0,,100%,NORMAL,left,8,0,0,0,0
+H4=,16,26,0,0,0,,100%,NORMAL,left,8,0,0,0,0
+H6=,16,26,0,0,0,,100%,NORMAL,left,8,0,0,0,0
+H5=,16,26,0,0,0,,100%,NORMAL,left,8,0,0,0,0
+Quote = Avenir-Light,20,28,200,255,20,,100%
 ```
 
 
