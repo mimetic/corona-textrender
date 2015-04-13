@@ -1600,7 +1600,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 								end
 
 								if (tag == "a") then
-									local touchme = touchableBox(result, "BottomLeft", newDisplayLineGroup.x, newDisplayLineGroup.y - (fontInfo.capheight * settings.size)/4,  newDisplayLineText.width-2, fontInfo.capheight * settings.size, hyperlinkFillColor)
+									local touchme = touchableBox(newDisplayLineGroup, "BottomLeft", 0, 0,  newDisplayLineText.width-2, fontInfo.capheight * settings.size, hyperlinkFillColor)
 
 									attr.text = alttext
 									attachLinkToObj(newDisplayLineGroup, attr, settings.handler)
