@@ -1524,15 +1524,18 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 					
 					renderedLinesStats[currentRenderedLineIndex].text = renderedLinesStats[currentRenderedLineIndex].text .. text
 
-					-- Can't just save the settings table b/c Lua doesn't 'copy' tables 
-					-- by assigning to a new variable!
-					renderedLinesStats[currentRenderedLineIndex].rightIndent = settings.rightIndent
-					renderedLinesStats[currentRenderedLineIndex].leftIndent = settings.leftIndent
-					renderedLinesStats[currentRenderedLineIndex].firstLineIndent = settings.currentFirstLineIndent
+					-- Can't just save the settings table b/c Lua doesn't 'copy' tables by assigning to a new variable!
+					-- Lines with sub-elements might have these values already set. Don't overwrite!
+					renderedLinesStats[currentRenderedLineIndex].rightIndent = renderedLinesStats[currentRenderedLineIndex].rightIndent or settings.rightIndent
 					
+					renderedLinesStats[currentRenderedLineIndex].leftIndent = renderedLinesStats[currentRenderedLineIndex].leftIndent or settings.leftIndent
 
-					renderedLinesStats[currentRenderedLineIndex].textAlignment = textAlignment
+					renderedLinesStats[currentRenderedLineIndex].firstLineIndent = renderedLinesStats[currentRenderedLineIndex].firstLineIndent or settings.currentFirstLineIndent
+
+					renderedLinesStats[currentRenderedLineIndex].textAlignment = renderedLinesStats[currentRenderedLineIndex].textAlignment or textAlignment
+					
 					renderedLinesStats[currentRenderedLineIndex].currentWidth = settings.currentWidth
+					
 					renderedLinesStats[currentRenderedLineIndex].width = settings.width
 
 				end
@@ -1770,6 +1773,8 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 
 								if (testing) then
 									print ("Rendering from XML, not cache.")
+									print ("")
+									print ("")
 								end
 
 								---------------------------------------------
@@ -1847,7 +1852,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 												end
 											else
 												tempLineWidth = tempDisplayLineTxt.width + settings.currentXOffset
-												settings.currentFirstLineIndent = 0
+												--settings.currentFirstLineIndent = 0
 											end
 
 											display.remove(tempDisplayLineTxt);
@@ -1856,8 +1861,8 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 
 
 											-- ===================================
-
-
+																						
+											-- This text may be an element inside a first line, so we must include the currentFirstLineIndent to calc the current line width.
 											-- Since indents may change per line, we have to reset this each time.
 											settings.currentWidth = settings.width - settings.leftIndent - settings.rightIndent - settings.currentFirstLineIndent
 
@@ -1885,12 +1890,12 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 			print ("----------------------------")
 			print ("A: Render line: ["..currentLine .. "]")
 			print ("currentRenderedLineIndex:", currentRenderedLineIndex)
-		--														print ("Font: [".. settings.font .. "]")
-		--														print ("settings.currentWidth",settings.currentWidth)
-	--		print ("isFirstLine", isFirstLine)
-	--		print ("renderTextFromMargin: ", renderTextFromMargin)
-	--		print ("lineY = ",lineY)
-		--														print ("   newDisplayLineGroup.y = ",lineY + descent .. " + " .. descent)
+			--														print ("Font: [".. settings.font .. "]")
+			print ("settings.currentWidth",settings.currentWidth)
+			print ("isFirstLine", isFirstLine)
+			print ("renderTextFromMargin: ", renderTextFromMargin)
+			print ("lineY = ",lineY)
+			-- print ("   newDisplayLineGroup.y = ",lineY + descent .. " + " .. descent)
 		end
 
 														if (isFirstLine) then
@@ -2307,12 +2312,12 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 									end
 
 
-									if (testing) then
+	--								if (testing) then
 	--									print ("Previous Line:", "["..prevTextInLine.."]", strlen(prevTextInLine))
 	--									print ("lineY:",lineY)
 	--									print ("settings.currentSpaceBefore:",settings.currentSpaceBefore, settings.spaceBefore)
 	--									print ("settings.currentSpaceAfter:",settings.currentSpaceAfter, settings.spaceAfter)
-									end
+	--								end
 
 									--print ("C: render a line:", currentLine)
 
@@ -2392,12 +2397,12 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 									end
 
 									createLinkingBox(newDisplayLineGroup, newDisplayLineText, currentLine, {250,0,0,30})
+									
+									isFirstLine = false
+									renderTextFromMargin = false
 
 									-- Clear the current line
 									currentLine = ""
-								
-									isFirstLine = false
-									renderTextFromMargin = false
 
 								end
 							
