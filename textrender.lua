@@ -644,8 +644,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 	local baseline = 0
 	local descent = 0
 	local ascent = 0
-
-
+	
 	if (testing) then
 		print ("autoWrappedText: testing flag is true.")
 		print ("----------")
@@ -1505,7 +1504,9 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 					if (not renderedLines[currentRenderedLineIndex]) then
 						renderedLines[currentRenderedLineIndex] = display.newGroup()
 						renderedLines[currentRenderedLineIndex].anchorChildren = true
+						
 						funx.addPosRect(renderedLines[currentRenderedLineIndex], testing)
+						
 						result:insert(renderedLines[currentRenderedLineIndex])
 						anchorZero(renderedLines[currentRenderedLineIndex], "BottomLeft")
 						renderedLinesStats[currentRenderedLineIndex] = renderedLinesStats[currentRenderedLineIndex] or { text = "", ascent = ascent, }
@@ -1574,6 +1575,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 							local wordlen = 0
 							
 							local isFirstLineInElement = true
+
 														
 							-- =======================================================
 							-- FUNCTIONS
@@ -1620,7 +1622,13 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 							if (elementCounter == 1) then
 								--renderTextFromMargin = true
 							end
-
+							
+							-- Do not render empty elements or an element that is just a space
+							-- MUST return an empty table!
+							if (not element or element == " " ) then
+								return {}
+							end
+							
 							nextChunk = element or ""
 							nextChunkLen = strlen(nextChunk)
 
@@ -1904,7 +1912,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 															isFirstLine = false
 															settings.currentFirstLineIndent = settings.firstLineIndent
 															if (not isFirstTextInBlock and renderTextFromMargin) then
-																lineY = lineY + currentLineHeight + settings.currentSpaceBefore
+																--lineY = lineY + currentLineHeight + settings.currentSpaceBefore
 															end
 														else
 															currentLineHeight = lineHeight
@@ -2115,7 +2123,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 															isFirstLine = false
 															settings.currentFirstLineIndent = settings.firstLineIndent
 															if (not isFirstTextInBlock and renderTextFromMargin) then
-																lineY = lineY + currentLineHeight + settings.currentSpaceBefore
+																--lineY = lineY + currentLineHeight + settings.currentSpaceBefore
 															end
 														else
 															currentLineHeight = lineHeight
@@ -2272,13 +2280,14 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 										print ()
 										print ("----------------------------")
 										print ("C: Final line: ["..currentLine.."]", "length=" .. strlen(currentLine))
-	--									print ("Font: [".. settings.font .. "]")
-	--									print ("currentRenderedLineIndex:", currentRenderedLineIndex)
-	--									print ("isFirstLine", isFirstLine)
-	--									print ("renderTextFromMargin: ", renderTextFromMargin)
-	--									print ("Width,", settings.width)
-	--									print ("settings.currentWidth", settings.currentWidth)
-	--									print ("textAlignment: ", textAlignment)
+										print ("Font: [".. settings.font .. "]")
+										print ("currentRenderedLineIndex:", currentRenderedLineIndex)
+										print ("isFirstLine", isFirstLine)
+										print ("renderTextFromMargin: ", renderTextFromMargin)
+										print ("Width,", settings.width)
+										print ("settings.currentWidth", settings.currentWidth)
+										print ("textAlignment: ", textAlignment)
+										print ("lineHeight: ", lineHeight)
 
 									end
 
@@ -2290,7 +2299,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 										-- If first line of a block of text, then we must start on a new line.
 										-- Jump to next line to start this text
 										if (not isFirstTextInBlock and renderTextFromMargin ) then
-											lineY = lineY + currentLineHeight + settings.currentSpaceBefore
+											--lineY = lineY + currentLineHeight + settings.currentSpaceBefore
 										end
 										--renderTextFromMargin = true
 									else
@@ -2411,7 +2420,9 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 								end
 								cacheIndex = cacheIndex + 1							
 						end -- cached/not cached if
-	
+
+						-- This will only be changed if we rendered an element.
+						-- If the element was empty, it won't make it this far.
 						isFirstTextInBlock = false
 						
 						return result
@@ -2434,8 +2445,9 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 
 					------------------------------------------------------------
 					-- Handle formatting tags: p, div, br
+					-- This is the opening tag, so we add space before and stuff like that.
 					------------------------------------------------------------
-					
+
 					if (tag == "p" or tag == "div" or tag == "li" or tag == "ul" or tag == "ol") then
 
 						-- Reset margins, cursor, etc. to defaults
@@ -2468,6 +2480,11 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 						settings.currentSpaceBefore = settings.spaceBefore
 						settings.currentSpaceAfter = settings.spaceAfter
 
+						-- Opening <p> makes us jump down one line.
+						if (not isFirstTextInBlock and renderTextFromMargin) then
+							lineY = lineY + lineHeight + settings.currentSpaceBefore
+						end
+						
 
 						-- LISTS
 						if (tag == "ol" or tag == "ul" ) then
@@ -2509,10 +2526,9 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 					elseif (tag == "br") then
 						renderTextFromMargin = true
 						settings.currentXOffset = 0
+						lineY = lineY + lineHeight + settings.currentSpaceAfter
 						x = 0
- 					end
-
-					if (tag == "a") then
+ 					elseif (tag == "a") then
 						-- Always use hyperlinkTextColor for the hyperlink text
 						-- NO. InDesign doesn't let us use a <span> to color the text, but it does let us surround the <a>
 						-- with a <span>. I mean, that's how the conversion comes in.
@@ -2521,10 +2537,9 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 						if (hyperlinkTextColor) then 
 							attr.color = "(" .. hyperlinkTextColor .. ")"	-- parens are parsed by setStyleFromTag()
 						end
-					end
-
+						
 					-- LIST ITEMS: add a bullet or number
-					if (tag == "li") then
+					elseif  (tag == "li") then
 						stacks.list[stacks.list.ptr] = stacks.list[stacks.list.ptr] or {}
 						-- default for list is a disk.
 						local t = ""
@@ -2543,12 +2558,16 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 						addToCurrentRenderedLine(e, x, lineY, textAlignment, settings, t)
 						settings.currentXOffset = settings.currentXOffset + e.width
 
-					end
 
+					-- Ignore <style> and <script> blocks.
+					elseif (tag == "style" or tag == "script" or tag=="head" ) then
+						parsedText = {}
+					end
 
 					-- Render XML into lines of text
 
 					for n, element in ipairs(parsedText) do
+
 						--local styleSettings = {}
 						if (type(element) == "table") then
 --print ("A-Tag",tag)
@@ -2568,6 +2587,13 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 							if (not element) then
 								print ("***** WARNING, EMPTY ELEMENT**** ")
 							end
+
+							-- Text that has no wrapper, i.e. that isn't inside of <p> or <ol>, etc.,
+							-- will be tagged 'body' and should be treated like <p>
+							if  (element and element ~= " " and tag == "body") then
+								lineY = lineY + lineHeight + settings.currentSpaceAfter
+							end
+
 --print ("B-Tag",tag, element, currentXOffset)
 							local saveStyleSettings = getAllStyleSettings()
 							
@@ -2593,6 +2619,8 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 						setStyleFromTag (tag, attr)
 						renderTextFromMargin = true
 						lineY = lineY + settings.currentSpaceAfter
+						--lineY = lineY + currentLineHeight + settings.currentSpaceAfter
+
 						-- Reset the first line of paragraph flag
 						isFirstLine = true
 						elementCounter = 1
