@@ -95,7 +95,7 @@ local setFillColorFromString = funx.setFillColorFromString
 local split = funx.split
 local setCase = funx.setCase
 local fixCapsForReferencePoint = funx.fixCapsForReferencePoint
-
+local isPercent = funx.isPercent
 
 
 -- Useful constants
@@ -272,6 +272,12 @@ local function getTagFormatting(fontFaces, tag, currentfont, variation, attr)
 		format = attr
 		format.font = attr.name
 		--format.basename = attr.name
+	elseif ( tag == "sup") then
+		format.scale = "70%"
+		format.yOffset = "50%"
+	elseif ( tag == "sub") then
+		format.scale = "70%"
+		format.yOffset = "-10%"
 	elseif (attr) then
 		-- get style info
 		local style = {}
@@ -867,6 +873,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 	settings.bullet = "&#9679;"
 	settings.minLineCharCount = minCharCount or 5
 	settings.maxHeight = tonumber(maxHeight) or 0
+	settings.yOffset = 0	-- used for ascenders/descenders, superscript, subscript
 
  	lineHeight = funx.applyPercent(lineHeight, settings.size) or floor(settings.size * 1.3)
 
@@ -922,6 +929,9 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 			-- Right Indent
 			params.rightIndent = settings.rightIndent
 			params.textAlignment = textAlignment
+			
+			params.yOffset = settings.yOffset
+
 			return params
 		end
 
@@ -954,6 +964,9 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 				-- Right Indent
 			if (params.rightIndent ) then settings.rightIndent = tonumber(params.rightIndent) end
 			if (params.textAlignment ) then textAlignment = params.textAlignment end
+
+			if (params.yOffset ) then settings.yOffset = params.yOffset end
+
 	--[[
 			if (lower(textAlignment) == "right") then
 				x = settings.width - settings.rightIndent
@@ -1057,6 +1070,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 			if (not format or format == {}) then
 				return 
 			end
+			
 			-- font
 			if (format.font) then
 				settings.font = trim(format.font)
@@ -1068,6 +1082,16 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 				settings.fontvariation = format.fontvariation
 			end
 
+			-- Scale the font
+			-- If value is a percentage, apply it
+			if (format['yOffset']) then
+				settings.yOffset = settings.yOffset + funx.applyPercent ( format.yOffset, settings.size, false)
+			end
+
+			if (format['scale']) then
+				settings.size = funx.applyPercent ( format.scale, settings.size, false)
+			end
+			
 			-- font size
 			if (format['font-size'] or format['size']) then
 				if (format['font-size']) then
@@ -1076,7 +1100,6 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 				else
 					settings.size = convertValuesToPixels(format['size'], settings.deviceMetrics)
 				end
-
 				--size = scaleToScreenSize(tonumber(params[3]), scalingRatio)
 				-- reset min char count in case we loaded a BIG font
 				settings.minLineCharCount = minCharCount or 5
@@ -1519,7 +1542,8 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 					obj.x = x + settings.currentXOffset
 
 					-- Set the line at it's baseline, by using the Font's Ascent value
-					obj.y = renderedLinesStats[currentRenderedLineIndex].ascent
+					-- The settings.yOffset is used for superscript/subscript
+					obj.y = renderedLinesStats[currentRenderedLineIndex].ascent - settings.yOffset
 
 					renderedLines[currentRenderedLineIndex].y = lineY
 					
@@ -2574,7 +2598,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 							local saveStyleSettings = getAllStyleSettings()
 							-- Apply a font formatting tag, e.g. bold or italic
 							-- These settings cascade to nested elements
-							if (tag == "span" or tag == "a" or tag == "b" or tag == "i" or tag == "em" or tag == "strong" or tag == "font" ) then
+							if (tag == "span" or tag == "a" or tag == "b" or tag == "i" or tag == "em" or tag == "strong" or tag == "font" or tag == "sup" or tag == "sub" ) then
 								setStyleFromTag (tag, attr)
 							end
 
