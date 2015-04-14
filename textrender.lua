@@ -1110,7 +1110,6 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 				lineHeight = convertValuesToPixels (format.lineHeight, settings.deviceMetrics)
 			end
 
-
 			-- lineHeight (CSS property)
 			if (format['line-height']) then
 				lineHeight = convertValuesToPixels (format['line-height'], settings.deviceMetrics)
@@ -1709,15 +1708,36 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 							 So, we don't know if this requires an end-of-line at the end!
 
 							 A chunk to render is ALWAYS pure text. All HTML formatting is outside it.
+							
+							Lua REGEX:
+							() captures
+							[] defines a class, i.e. characters in this class
+							^ negates the class, i.e. characters not in this class
+
 							--]]
+
 
 
 							result = display.newGroup()
 							result.anchorX, result.anchorY = 0, 0
 
 							textDisplayReferencePoint = "BottomLeft"
+							
+							local _, padding
+							-- In the rare, rare case that our chunk of text is a single hyphen,
+							-- which happens if you make some sort of mathematical formula,
+							-- we have to capture it differently.
+							local isSingleHyphen = string.match(nextChunk, '^%s-(%-)%s-')
+							
+--if (isSingleHyphen) then
+--	print ("nextChunk ["..nextChunk.."]", isSingleHyphen)
+--end
 							-- Preserve initial padding before first word
-							local  _, _, padding = find(nextChunk, "^([%s%-]*)")
+							-- This captures spaces and hyphens!
+							if (not isSingleHyphen) then
+								_, _, padding = find(nextChunk, "^([%s%-]*)")
+							end
+
 							padding = padding or ""
 
 							-- Get chunks of text to iterate over to figure out line line wrap
@@ -1730,7 +1750,14 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 								words = iteratorOverCacheText(cachedChunk.text)
 							else
 								cachedChunk = newCacheChunk()
-								words = gmatch(nextChunk, "([^%s%-]+)([%s%-]*)")
+								
+								-- So, ([^%s%-]+)([%s%-]*) ==> all non-space, non-hyphens followed by spaces or hyphens
+								if (not isSingleHyphen) then
+									words = gmatch(nextChunk, "([^%s%-]+)([%s%-]*)")
+								else
+									-- So, ([^%s]+)([%s]*) ==> all non-space followed by spaces
+									words = gmatch(nextChunk, "([^%s]+)([%s]*)")
+								end
 							end
 							
 
@@ -1813,7 +1840,6 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 								--local word,spacer
 								local word, spacer, longword
 								for word, spacer in words do
-
 									if (not textwrapIsCached) then
 										if (firstWord) then
 											word = padding .. word
