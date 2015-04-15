@@ -158,6 +158,25 @@ H5=,16,26,0,0,0,,100%,NORMAL,left,8,0,0,0,0
 Quote = Avenir-Light,20,28,200,255,20,,100%
 ```
 
+## HTML Tags
+The module recognizes the following HTML tags.
+- `<p class="myclass">text</p>`
+- `<br>`
+- `<ol><li>text</li></ol>`
+- `<b> <i> <em> <strong>`
+- `<font>`
+- `<sup> <sub>`
+- `<a href="">`
+- `<img src="path-to-file">`
+
+You can also add many CSS `style` attributes to tags:
+- `text-align`
+- `size` or `font-size`
+- `font-family`
+- `line-height`
+- `margin-top margin-left margin-right margin-bottom`
+- `bullet`
+- `color` (the color value must be an RGBa color string, e.g. either "12,24,55,123" or "0.1, 0.9, 1, 0.8" depending on your graphics version. Version 1.0 uses 0-255 for colors while version 2.0 uses 0-1.)
 
 ## Notes:
 
