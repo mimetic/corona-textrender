@@ -58,6 +58,9 @@ end
 -- Main var for this module
 local T = {}
 
+local pathToModule = "scripts/textrender/"
+T.path = pathToModule
+
 -- funx must be installed in scripts folder
 local funx = require ("scripts.funx")
 
@@ -68,21 +71,25 @@ local fontMetricsLib = require("scripts.textrender.fontmetrics")
 local sqlite3 = require ( "sqlite3" )
 local json = require( "json" )
 local crypto = require ( "crypto" )
-
+local widget = require( "widget" )
 
 
 -- functions
-local max = math.max
-local min = math.min
-local lower = string.lower
-local upper = string.upper
-local gmatch = string.gmatch
-local gsub = string.gsub
-local strlen = string.len
-local substring = string.sub
+local abs = math.abs
+local ceil = math.ceil
 local find = string.find
 local floor = math.floor
 local gfind = string.gfind
+local gmatch = string.gmatch
+local gsub = string.gsub
+local lower = string.lower
+local max = math.max
+local min = math.min
+local strlen = string.len
+local substring = string.sub
+local upper = string.upper
+
+
 
 -- shortcuts to my functions
 local anchor = funx.anchor
@@ -355,6 +362,230 @@ local function first_row(db, cmd)
 	end
 	return row
 end
+
+
+
+----------------------------------------------------------
+-- Made a text block a scrolling text block.
+-- local scrollingblock = textblock:fitBlockToHeight ( options )
+----------------------------------------------------------
+local function fitBlockToHeight(textblock, options )
+
+	local maxheight = options.maxVisibleHeight or screenH
+	local scrollingFieldIndicatorActive = options.scrollingFieldIndicatorActive
+	local parentTouchObject = options.parentTouchObject
+
+	local h = funx.percentOfScreenHeight(maxheight)
+	if (not h) then
+		h = screenH - tt - tb
+	end
+	-- width and height must be a multiple of four
+	h = ceil( h/4 ) * 4
+
+	local w = funx.percentOfScreenWidth(textblock.width)
+	if (not w) then
+		w = screenW - tl - tr
+	end
+	-- width and height must be a multiple of four
+	w = ceil( w/4 ) * 4
+
+	-- Set a flag
+	local textBlockIsScrolling = false
+	
+	-- This will be either the scrolling block, or just the textblock as it was
+	local finalTextBlock
+
+	if ( textblock.height > h ) then
+
+		-- Listener function to listen to scrollView events
+		-- However, this does NOT pass the touch event on even if we return false.
+		-- Dammit.
+
+		local prevPosX, prevPosY
+		local startTime
+		local minTapTime = 10
+		local maxTapTime = 200
+		local swipeDistance = 40
+		local dragDistance, dragDistanceX, dragDistanceY
+		--local swipeHorizontal, swipeVertical
+		local dX, dY
+
+
+		local function scrollViewListener( event )
+			--print ("event.phase",event.phase)
+
+		    local phase = event.phase
+			if ( phase == "moved" ) then
+				local dx = math.abs( ( event.x - event.xStart ) )
+				-- If the touch on the object has moved more than 10 pixels,
+				-- pass focus back to the parent object so it can continue doing its thing,
+				-- usually scrolling
+				if ( parentTouchObject and dx > 10 ) then
+					parentTouchObject:takeFocus( event )
+				end
+			end
+		    return true
+		end
+
+
+		-- Create a new ScrollView widget:
+
+		-- The scrolling handle isn't visible unless we provide some extra space for it.
+		-- We use a background but make it see-through, so that we can scroll from
+		-- by swiping inside the rect of the scrollview
+		
+		--local correctForScrollHandle = 12
+		
+		
+		-- customScrollBar.options = true/false
+		local scrollBarOptions = nil
+
+		--[[
+		-- The custom scrollbar does not work in the current widgets!
+		
+		if options.customScrollBar then
+			local scrollBarOpt = {
+				width = 20,
+				height = 20,
+				numFrames = 3,
+				sheetContentWidth = 20,
+				sheetContentHeight = 60,
+			}
+			local scrollBarSheet = graphics.newImageSheet( pathToModule.."assets/widget-scrollbar.png", scrollBarOpt )
+			
+			scrollBarOptions = {
+				sheet = scrollBarSheet,  --reference to the image sheet
+				frameWidth = 20,
+				frameHeight = 20,
+				topFrame = 1,            --number of the "top" frame
+				middleFrame = 2,         --number of the "middle" frame
+				bottomFrame = 3          --number of the "bottom" frame
+			}
+			
+
+		end
+		--]]
+
+		local maskFileName = funx.makeMask(w,h, "masks")
+		
+		local args = {
+			width = w,--+correctForScrollHandle,
+			height = h,
+			scrollWidth = w,--+correctForScrollHandle,
+			scrollHeight = h,
+			hideScrollBar = false,
+			maskFile = maskFileName,
+			baseDir = system.CachesDirectory,
+			listener = scrollViewListener,
+			hideBackground = options.hideBackground,
+			backgroundColor = options.backgroundColor or {1,1,1},
+			topPadding = 0,
+			bottomPadding = 0,
+			horizontalScrollDisabled = true,
+			
+			scrollBarOptions = scrollBarOptions,
+		}
+
+		local scrollView = widget.newScrollView(args)
+
+		-- Create an object and place it inside of ScrollView:
+		scrollView:insert( textblock )
+		finalTextBlock = scrollView
+
+		-- Create an invisible rect so we can swipe anywhere in the text,
+		-- instead of only on text itself.
+		local objForSwipe = display.newRect(textblock, 0,0,textblock.contentWidth,textblock.contentHeight)
+		funx.anchor(objForSwipe, "TopLeft")
+		objForSwipe.x = 0
+		objForSwipe.y = 0
+		objForSwipe:setFillColor(250,0,0,0)
+		objForSwipe:toBack()
+
+		if (scrollingFieldIndicatorActive) then
+			-- Add an icon to indicate this is a scrolling text field,
+			-- Or add icons top/bottom, depending on settings
+			-- The icon should disappear after usage(?)
+			local scrollingFieldIndicator, scrollingFieldIndicatorUp, scrollingFieldIndicatorDown
+			if (options.scrollingFieldIndicatorLocation == "over") then
+				scrollingFieldIndicator = funx.loadImageFile(options.scrollingFieldIndicatorIconOver)
+				local s = min(w, h) - 10
+				local r = s / min(scrollingFieldIndicator.width, scrollingFieldIndicator.height)
+
+				funx.anchor(scrollingFieldIndicator, "TopCenter")
+				scrollingFieldIndicator:scale(r,r)
+
+				scrollView:insert( scrollingFieldIndicator )
+				scrollView.Indicator = scrollingFieldIndicator
+				scrollingFieldIndicator.x = w/2
+				scrollingFieldIndicator.y = 0
+			elseif (options.scrollingFieldIndicatorLocation == "bottom") then
+				scrollingFieldIndicatorDown = funx.loadImageFile(options.scrollingFieldIndicatorIconDown)
+				scrollView:insert( scrollingFieldIndicatorDown )
+				scrollView.downIndicator = scrollingFieldIndicatorDown
+				funx.anchor(scrollingFieldIndicatorDown, "BottomCenter")
+
+				scrollView.downIndicator.x = (scrollView.width /2)
+				scrollView.downIndicator.y = (h - 10)
+			else
+				scrollingFieldIndicatorUp = funx.loadImageFile(options.scrollingFieldIndicatorIconUp)
+				scrollingFieldIndicatorDown = funx.loadImageFile(options.scrollingFieldIndicatorIconDown)
+				scrollView:insert( scrollingFieldIndicatorUp )
+				scrollView:insert( scrollingFieldIndicatorDown )
+
+				scrollView.upIndicator = scrollingFieldIndicatorUp
+				scrollView.downIndicator = scrollingFieldIndicatorDown
+
+				funx.anchor(scrollingFieldIndicatorUp, "TopCenter")
+				funx.anchor(scrollingFieldIndicatorDown, "BottomCenter")
+
+				scrollView.upIndicator.x = (scrollView.width /2)
+				scrollView.downIndicator.x = (scrollView.width /2)
+				scrollView.upIndicator.y = 10
+				scrollView.downIndicator.y = (h - 10)
+			end
+
+					-- FADE AWAY scrollingFieldIndicator
+					local function fadeOpeningItems( )
+						
+							-- Fade out
+						local function fout(obj)
+							funx.fadeOut(obj, nil, nil)
+						end
+
+						-- Wait...
+						local function waitabit(obj)
+							timer.performWithDelay( options.pageItemsPrefadeOnOpeningTime, function() fout(obj) end )
+						end
+						if (options.scrollingFieldIndicatorLocation == "over") then
+							funx.fadeIn(scrollingFieldIndicator, function() waitabit(scrollingFieldIndicator) end, options.pageItemsFadeInOpeningTime)
+						elseif (options.scrollingFieldIndicatorLocation == "bottom") then
+							funx.fadeIn(scrollingFieldIndicatorDown, function() waitabit(scrollingFieldIndicatorDown) end, options.pageItemsFadeInOpeningTime)
+						else
+							funx.fadeIn(scrollingFieldIndicatorUp, function() waitabit(scrollingFieldIndicatorUp) end, options.pageItemsFadeInOpeningTime)
+							funx.fadeIn(scrollingFieldIndicatorDown, function() waitabit(scrollingFieldIndicatorDown) end, options.pageItemsFadeInOpeningTime)
+						end
+
+					end
+
+			-- Begin the fade away immediately
+			fadeOpeningItems()
+
+		end -- scroll view indicator icon
+
+		textBlockIsScrolling = true
+		-- must copy this over!
+		finalTextBlock.anchorChildren = false
+		finalTextBlock.yAdjustment = textblock.yAdjustment
+		finalTextBlock.anchorChildren = true
+		finalTextBlock.anchorX, finalTextBlock.anchorY = 0,0
+		
+	else
+		finalTextBlock = textblock
+	end
+	
+	return finalTextBlock
+end
+
 
 
 local function openCacheDB()
@@ -646,6 +877,12 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 	local midscreenX = screenW*(0.5)
 	local midscreenY = screenH*(0.5)
 
+	----------
+	--if text == '' then return false end
+	local result = display.newGroup()
+	
+	-- Add the scrollblock function to the result
+	result.fitBlockToHeight = fitBlockToHeight
 
 	local baseline = 0
 	local descent = 0
@@ -670,9 +907,6 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 
 	-- handler for links
 	settings.handler = {}
-
-	--if text == '' then return false end
-	local result = display.newGroup()
 
 	-- Get from the funx textStyles variable.
 	local textstyles = textstyles or {}
@@ -2787,6 +3021,7 @@ end
 
 T.autoWrappedText = autoWrappedText
 T.clearAllCaches = clearAllCaches
+T.fitBlockToHeight = fitBlockToHeight
 
 -- OPEN CACHE DATABASE
 openCacheDB()
