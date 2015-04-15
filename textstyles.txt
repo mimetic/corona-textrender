@@ -51,8 +51,3 @@ LeftIndent = Baskerville,16,24, 0,0,0,,100%,NORMAL, left,0,0,20,0,0
 Left = Baskerville,16,24, 0,0,0,,100%,NORMAL, left,0,0,0,0,0
 Right = Baskerville,16,24,0,0,0,,100%,NORMAL,right,0,0,0,0,0
 Center = Baskerville,16,24,0,0,0,,100%,NORMAL,center,0,0,0,0,0
-
-# image
-image-left = 	,,,,,,,50%,,left,10,10,,,
-image-right = 	,,,,,,,50%,,right,10,10,,,
-image-center = 	,,,,,,,50%,,center,10,10,,,
