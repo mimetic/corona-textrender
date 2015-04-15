@@ -2828,14 +2828,14 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 						parsedText = {}
 
 					elseif (tag == "img") then
-
 						renderTextFromMargin = true
 						settings.currentXOffset = 0
 						lineY = lineY + settings.currentSpaceAfter
 						x = 0
 						if (attr.src ) then
-							if (funx.fileExists( attr.src )) then
-								local image = funx.loadImageFile( attr.src )
+							attr.directory = attr.directory or "ResourceDirectory"
+							if (funx.fileExists( attr.src,  system[attr.directory] )) then
+								local image = funx.loadImageFile( attr.src, nil, system[attr.directory] )
 								anchor(image, "TopLeft")
 								if ( attr.width or attr.height) then
 									funx.ScaleObjToSize (image, funx.applyPercent(attr.width, width), attr.height)
