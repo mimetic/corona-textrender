@@ -58,6 +58,9 @@ end
 -- Main var for this module
 local T = {}
 
+local pathToModule = "scripts/textrender/"
+T.path = pathToModule
+
 -- funx must be installed in scripts folder
 local funx = require ("scripts.funx")
 
@@ -68,21 +71,25 @@ local fontMetricsLib = require("scripts.textrender.fontmetrics")
 local sqlite3 = require ( "sqlite3" )
 local json = require( "json" )
 local crypto = require ( "crypto" )
-
+local widget = require( "widget" )
 
 
 -- functions
-local max = math.max
-local min = math.min
-local lower = string.lower
-local upper = string.upper
-local gmatch = string.gmatch
-local gsub = string.gsub
-local strlen = string.len
-local substring = string.sub
+local abs = math.abs
+local ceil = math.ceil
 local find = string.find
 local floor = math.floor
 local gfind = string.gfind
+local gmatch = string.gmatch
+local gsub = string.gsub
+local lower = string.lower
+local max = math.max
+local min = math.min
+local strlen = string.len
+local substring = string.sub
+local upper = string.upper
+
+
 
 -- shortcuts to my functions
 local anchor = funx.anchor
@@ -96,6 +103,10 @@ local split = funx.split
 local setCase = funx.setCase
 local fixCapsForReferencePoint = funx.fixCapsForReferencePoint
 local isPercent = funx.isPercent
+local loadImageFile = funx.loadImageFile
+
+-- Set the width/height of screen. Might have changed from when module loaded due to orientation change
+local screenW, screenH = display.contentWidth, display.contentHeight
 
 
 -- Useful constants
@@ -355,6 +366,230 @@ local function first_row(db, cmd)
 	end
 	return row
 end
+
+
+
+----------------------------------------------------------
+-- Made a text block a scrolling text block.
+-- local scrollingblock = textblock:fitBlockToHeight ( options )
+----------------------------------------------------------
+local function fitBlockToHeight(textblock, options )
+
+	local maxheight = options.maxVisibleHeight or screenH
+	local scrollingFieldIndicatorActive = options.scrollingFieldIndicatorActive
+	local parentTouchObject = options.parentTouchObject
+
+	local h = funx.percentOfScreenHeight(maxheight)
+	if (not h) then
+		h = screenH - tt - tb
+	end
+	-- width and height must be a multiple of four
+	h = ceil( h/4 ) * 4
+
+	local w = funx.percentOfScreenWidth(textblock.width)
+	if (not w) then
+		w = screenW - tl - tr
+	end
+	-- width and height must be a multiple of four
+	w = ceil( w/4 ) * 4
+
+	-- Set a flag
+	local textBlockIsScrolling = false
+	
+	-- This will be either the scrolling block, or just the textblock as it was
+	local finalTextBlock
+
+	if ( textblock.height > h ) then
+
+		-- Listener function to listen to scrollView events
+		-- However, this does NOT pass the touch event on even if we return false.
+		-- Dammit.
+
+		local prevPosX, prevPosY
+		local startTime
+		local minTapTime = 10
+		local maxTapTime = 200
+		local swipeDistance = 40
+		local dragDistance, dragDistanceX, dragDistanceY
+		--local swipeHorizontal, swipeVertical
+		local dX, dY
+
+
+		local function scrollViewListener( event )
+			--print ("event.phase",event.phase)
+
+		    local phase = event.phase
+			if ( phase == "moved" ) then
+				local dx = math.abs( ( event.x - event.xStart ) )
+				-- If the touch on the object has moved more than 10 pixels,
+				-- pass focus back to the parent object so it can continue doing its thing,
+				-- usually scrolling
+				if ( parentTouchObject and dx > 10 ) then
+					parentTouchObject:takeFocus( event )
+				end
+			end
+		    return true
+		end
+
+
+		-- Create a new ScrollView widget:
+
+		-- The scrolling handle isn't visible unless we provide some extra space for it.
+		-- We use a background but make it see-through, so that we can scroll from
+		-- by swiping inside the rect of the scrollview
+		
+		--local correctForScrollHandle = 12
+		
+		
+		-- customScrollBar.options = true/false
+		local scrollBarOptions = nil
+
+		--[[
+		-- The custom scrollbar does not work in the current widgets!
+		
+		if options.customScrollBar then
+			local scrollBarOpt = {
+				width = 20,
+				height = 20,
+				numFrames = 3,
+				sheetContentWidth = 20,
+				sheetContentHeight = 60,
+			}
+			local scrollBarSheet = graphics.newImageSheet( pathToModule.."assets/widget-scrollbar.png", scrollBarOpt )
+			
+			scrollBarOptions = {
+				sheet = scrollBarSheet,  --reference to the image sheet
+				frameWidth = 20,
+				frameHeight = 20,
+				topFrame = 1,            --number of the "top" frame
+				middleFrame = 2,         --number of the "middle" frame
+				bottomFrame = 3          --number of the "bottom" frame
+			}
+			
+
+		end
+		--]]
+
+		local maskFileName = funx.makeMask(w,h, "masks")
+		
+		local args = {
+			width = w,--+correctForScrollHandle,
+			height = h,
+			scrollWidth = w,--+correctForScrollHandle,
+			scrollHeight = h,
+			hideScrollBar = false,
+			maskFile = maskFileName,
+			baseDir = system.CachesDirectory,
+			listener = scrollViewListener,
+			hideBackground = options.hideBackground,
+			backgroundColor = options.backgroundColor or {1,1,1},
+			topPadding = 0,
+			bottomPadding = 0,
+			horizontalScrollDisabled = true,
+			
+			scrollBarOptions = scrollBarOptions,
+		}
+
+		local scrollView = widget.newScrollView(args)
+
+		-- Create an object and place it inside of ScrollView:
+		scrollView:insert( textblock )
+		finalTextBlock = scrollView
+
+		-- Create an invisible rect so we can swipe anywhere in the text,
+		-- instead of only on text itself.
+		local objForSwipe = display.newRect(textblock, 0,0,textblock.contentWidth,textblock.contentHeight)
+		funx.anchor(objForSwipe, "TopLeft")
+		objForSwipe.x = 0
+		objForSwipe.y = 0
+		objForSwipe:setFillColor(250,0,0,0)
+		objForSwipe:toBack()
+
+		if (scrollingFieldIndicatorActive) then
+			-- Add an icon to indicate this is a scrolling text field,
+			-- Or add icons top/bottom, depending on settings
+			-- The icon should disappear after usage(?)
+			local scrollingFieldIndicator, scrollingFieldIndicatorUp, scrollingFieldIndicatorDown
+			if (options.scrollingFieldIndicatorLocation == "over") then
+				scrollingFieldIndicator = loadImageFile(options.scrollingFieldIndicatorIconOver)
+				local s = min(w, h) - 10
+				local r = s / min(scrollingFieldIndicator.width, scrollingFieldIndicator.height)
+
+				funx.anchor(scrollingFieldIndicator, "TopCenter")
+				scrollingFieldIndicator:scale(r,r)
+
+				scrollView:insert( scrollingFieldIndicator )
+				scrollView.Indicator = scrollingFieldIndicator
+				scrollingFieldIndicator.x = w/2
+				scrollingFieldIndicator.y = 0
+			elseif (options.scrollingFieldIndicatorLocation == "bottom") then
+				scrollingFieldIndicatorDown = loadImageFile(options.scrollingFieldIndicatorIconDown)
+				scrollView:insert( scrollingFieldIndicatorDown )
+				scrollView.downIndicator = scrollingFieldIndicatorDown
+				funx.anchor(scrollingFieldIndicatorDown, "BottomCenter")
+
+				scrollView.downIndicator.x = (scrollView.width /2)
+				scrollView.downIndicator.y = (h - 10)
+			else
+				scrollingFieldIndicatorUp = loadImageFile(options.scrollingFieldIndicatorIconUp)
+				scrollingFieldIndicatorDown = loadImageFile(options.scrollingFieldIndicatorIconDown)
+				scrollView:insert( scrollingFieldIndicatorUp )
+				scrollView:insert( scrollingFieldIndicatorDown )
+
+				scrollView.upIndicator = scrollingFieldIndicatorUp
+				scrollView.downIndicator = scrollingFieldIndicatorDown
+
+				funx.anchor(scrollingFieldIndicatorUp, "TopCenter")
+				funx.anchor(scrollingFieldIndicatorDown, "BottomCenter")
+
+				scrollView.upIndicator.x = (scrollView.width /2)
+				scrollView.downIndicator.x = (scrollView.width /2)
+				scrollView.upIndicator.y = 10
+				scrollView.downIndicator.y = (h - 10)
+			end
+
+					-- FADE AWAY scrollingFieldIndicator
+					local function fadeOpeningItems( )
+						
+							-- Fade out
+						local function fout(obj)
+							funx.fadeOut(obj, nil, nil)
+						end
+
+						-- Wait...
+						local function waitabit(obj)
+							timer.performWithDelay( options.pageItemsPrefadeOnOpeningTime, function() fout(obj) end )
+						end
+						if (options.scrollingFieldIndicatorLocation == "over") then
+							funx.fadeIn(scrollingFieldIndicator, function() waitabit(scrollingFieldIndicator) end, options.pageItemsFadeInOpeningTime)
+						elseif (options.scrollingFieldIndicatorLocation == "bottom") then
+							funx.fadeIn(scrollingFieldIndicatorDown, function() waitabit(scrollingFieldIndicatorDown) end, options.pageItemsFadeInOpeningTime)
+						else
+							funx.fadeIn(scrollingFieldIndicatorUp, function() waitabit(scrollingFieldIndicatorUp) end, options.pageItemsFadeInOpeningTime)
+							funx.fadeIn(scrollingFieldIndicatorDown, function() waitabit(scrollingFieldIndicatorDown) end, options.pageItemsFadeInOpeningTime)
+						end
+
+					end
+
+			-- Begin the fade away immediately
+			fadeOpeningItems()
+
+		end -- scroll view indicator icon
+
+		textBlockIsScrolling = true
+		-- must copy this over!
+		finalTextBlock.anchorChildren = false
+		finalTextBlock.yAdjustment = textblock.yAdjustment
+		finalTextBlock.anchorChildren = true
+		finalTextBlock.anchorX, finalTextBlock.anchorY = 0,0
+		
+	else
+		finalTextBlock = textblock
+	end
+	
+	return finalTextBlock
+end
+
 
 
 local function openCacheDB()
@@ -620,7 +855,6 @@ end
 
 
 
-
 --------------------------------------------------------
 -- Wrap text to a width
 -- Blank lines are ignored.
@@ -639,13 +873,12 @@ end
 
 local function autoWrappedText(text, font, size, lineHeight, color, width, alignment, opacity, minCharCount, targetDeviceScreenSize, letterspacing, maxHeight, minWordLen, textstyles, defaultStyle, cacheDir)
 
-	-- Set the width/height of screen. Might have changed from when module loaded due to orientation change
-	local screenW, screenH = display.contentWidth, display.contentHeight
-	local viewableScreenW, viewableScreenH = display.viewableContentWidth, display.viewableContentHeight
-	local screenOffsetW, screenOffsetH = display.contentWidth -  display.viewableContentWidth, display.contentHeight - display.viewableContentHeight
-	local midscreenX = screenW*(0.5)
-	local midscreenY = screenH*(0.5)
-
+	----------
+	--if text == '' then return false end
+	local renderedTextblock = display.newGroup()
+	
+	-- Add the scrollblock function to the result
+	renderedTextblock.fitBlockToHeight = fitBlockToHeight
 
 	local baseline = 0
 	local descent = 0
@@ -670,9 +903,6 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 
 	-- handler for links
 	settings.handler = {}
-
-	--if text == '' then return false end
-	local result = display.newGroup()
 
 	-- Get from the funx textStyles variable.
 	local textstyles = textstyles or {}
@@ -719,7 +949,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 	
 	-- If no text, do nothing.
 	if (not text) then
-		return result
+		return renderedTextblock
 	end
 	
 	
@@ -768,7 +998,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 	settings.minWordLen = settings.minWordLen or 2
 	text = text or ""
 	if (text == "") then
-		return result
+		return renderedTextblock
 	end
 
 	-- alignment is the initial setting for the text block, but sub-elements may differ
@@ -1401,34 +1631,23 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 			-- stick this here cuz it needs the closure variables
 			---------
 			local function renderXML (xmlChunk)
-
-				local result = display.newGroup()
+				
+				local renderXMLvars = {}
+				local renderXMLresult = display.newGroup()
 				-- Need this positioniong rect so lines can be right/center justified inside of the result group
-				funx.addPosRect(result, testing, {0,250,0})
+				funx.addPosRect(renderXMLresult, testing, {0,250,0})
 
 				if (not settings.width) then print ("WARNING: textwrap: renderXML: The width is not set! This shouldn't happen."); end
 
 
 				settings.width = settings.width or 300
 
-				-- Set text alignment
-				--[[
-				local textDisplayReferencePoint
-				if (textAlignment and textAlignment ~= "") then
-					textAlignment = fixCapsForReferencePoint(textAlignment)
-				else
-					textAlignment = "Left"
-				end
-				textDisplayReferencePoint = display["Bottom"..textAlignment.."ReferencePoint"]
-				--]]
-				
 				-- Everything is left aligned, the alignment happens after a whole line is built.
 				--textAlignment = "Left"
-				local textDisplayReferencePoint = "BottomLeft"
+				renderXMLvars.textDisplayReferencePoint = "BottomLeft"
 
 
-				local shortword = ""
-				local restOLineLen = strlen(restOLine)
+				renderXMLvars.shortword = ""
 
 				-- Set paragraph wide stuff, indents and spacing
 				settings.currentFirstLineIndent = settings.firstLineIndent
@@ -1459,7 +1678,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 				-- Tell the function which called this to raise the entire block to the cap-height
 				-- of the first line.
 
-				local fontInfo = fontMetrics.getMetrics(settings.font)
+				renderXMLvars.fontInfo = fontMetrics.getMetrics(settings.font)
 				local currentLineHeight = lineHeight
 
 				baseline, descent, ascent = getFontAscent(baselineCache, settings.font, settings.size)
@@ -1473,8 +1692,8 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 				-- We now know the max char width in a font,
 				-- so we can start with a minimum based on that.
 				-- IF the metric was set!
-				if (fontInfo.maxHorizontalAdvance) then
-					settings.minLineCharCount = floor((settings.currentWidth * widthCorrection) / (settings.size * fontInfo.maxCharWidth) )
+				if (renderXMLvars.fontInfo.maxHorizontalAdvance) then
+					settings.minLineCharCount = floor((settings.currentWidth * widthCorrection) / (settings.size * renderXMLvars.fontInfo.maxCharWidth) )
 				end
 
 
@@ -1502,10 +1721,6 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 				-- there is a line break.
 				local elementCounter = 1
 
-				-- First <p> tag means start a paragraph
-				local pOpen = true
-
-
 				------------------------------------------------------------
 				-- RENDERING
 				-- Now broken up into functions so we can recurse.
@@ -1529,7 +1744,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 						
 						funx.addPosRect(renderedLines[currentRenderedLineIndex], testing)
 						
-						result:insert(renderedLines[currentRenderedLineIndex])
+						renderXMLresult:insert(renderedLines[currentRenderedLineIndex])
 						anchorZero(renderedLines[currentRenderedLineIndex], "BottomLeft")
 						renderedLinesStats[currentRenderedLineIndex] = renderedLinesStats[currentRenderedLineIndex] or { text = "", ascent = ascent, }
 					end
@@ -1564,13 +1779,12 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 
 				end
 				
-				
-							
+										
 
 				local function renderParsedText(parsedText, tag, attr, parseDepth, stacks)
 
 					-- The rendered text with multiple lines in it
-					local result = display.newGroup()
+					local renderParsedTextResult = display.newGroup()
 					
 					parseDepth = parseDepth or 0
 					parseDepth = parseDepth + 1
@@ -1593,7 +1807,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 							local cachedChunk
 							local cachedChunkIndex = 1
 							local tempDisplayLineTxt
-							local result, resultPosRect
+							local renderParsedElementResult, resultPosRect
 							local tempLine, allTextInLine
 							local wordlen = 0
 							
@@ -1628,7 +1842,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 								end
 
 								if (tag == "a") then
-									local touchme = touchableBox(newDisplayLineGroup, "BottomLeft", 0, 0,  newDisplayLineText.width-2, fontInfo.capheight * settings.size, hyperlinkFillColor)
+									local touchme = touchableBox(newDisplayLineGroup, "BottomLeft", 0, 0,  newDisplayLineText.width-2, renderXMLvars.fontInfo.capheight * settings.size, hyperlinkFillColor)
 
 									attr.text = alttext
 									attachLinkToObj(newDisplayLineGroup, attr, settings.handler)
@@ -1718,10 +1932,10 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 
 
 
-							result = display.newGroup()
-							result.anchorX, result.anchorY = 0, 0
+							renderParsedElementResult = display.newGroup()
+							renderParsedElementResult.anchorX, renderParsedElementResult.anchorY = 0, 0
 
-							textDisplayReferencePoint = "BottomLeft"
+							renderXMLvars.textDisplayReferencePoint = "BottomLeft"
 							
 							local _, padding
 							-- In the rare, rare case that our chunk of text is a single hyphen,
@@ -1792,7 +2006,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 									-- We capture the x-position, so we don't need this which is used by addToCurrentRenderedLine
 									settings.currentXOffset = 0
 		
-									textDisplayReferencePoint = "BottomLeft"
+									renderXMLvars.textDisplayReferencePoint = "BottomLeft"
 		
 									local newDisplayLineGroup = display.newGroup()
 
@@ -1816,7 +2030,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 									lineCount = lineCount + 1
 		
 									if (not yAdjustment or yAdjustment == 0) then
-										yAdjustment = ( (settings.size / fontInfo.sampledFontSize ) * fontInfo.textHeight)- newDisplayLineGroup.height
+										yAdjustment = ( (settings.size / renderXMLvars.fontInfo.sampledFontSize ) * renderXMLvars.fontInfo.textHeight)- newDisplayLineGroup.height
 									end
 
 
@@ -1846,7 +2060,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 											firstWord = false
 										end
 
-										tempLine = currentLine..shortword..word..spacer
+										tempLine = currentLine..renderXMLvars.shortword..word..spacer
 
 									else
 										spacer = ""
@@ -1867,7 +2081,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 										-- What was this check for? It causes single-letter lines to be lost:
 										-- if ((strlen(allTextInLine) < nextChunkLen) and strlen(word) < settings.minWordLen) then
 										if (strlen(word) < settings.minWordLen) then
-											shortword = shortword..word..spacer
+											renderXMLvars.shortword = renderXMLvars.shortword..word..spacer
 										else
 
 											-- ===================================
@@ -2056,13 +2270,13 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 
 														-- Use the current line to estimate how many chars
 														-- we can use to make a line.
-														if (not fontInfo.maxHorizontalAdvance) then
+														if (not renderXMLvars.fontInfo.maxHorizontalAdvance) then
 															settings.minLineCharCount = strlen(currentLine)
 														end
 														
 														-- Carry over the shortword at the end of the line, e.g. "a"
 														-- the next line by adding it to the current word.
-														word = shortword..word
+														word = renderXMLvars.shortword..word
 
 														-- We have wrapped, don't need text from previous chunks of this line.
 														prevTextInLine = ""
@@ -2073,7 +2287,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 														if (textwrapIsCached) then
 															wordlen = cachedChunk.width[cachedChunkIndex]
 														elseif ( word ~= nil ) then
-															wordlen = strlen(word) * (settings.size * fontInfo.maxCharWidth)
+															wordlen = strlen(word) * (settings.size * renderXMLvars.fontInfo.maxCharWidth)
 														
 															local tempWord = display.newText({
 																 text=word,
@@ -2105,8 +2319,8 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 														-- Not predictable! So, we capture the height of the first line, and that is the basis of
 														-- our y adjustment for the entire block, to position it correctly.
 														if (not yAdjustment or yAdjustment == 0) then
-															--yAdjustment = (settings.size * fontInfo.ascent )- newDisplayLineGroup.height
-															yAdjustment = ( (settings.size / fontInfo.sampledFontSize ) * fontInfo.textHeight)- newDisplayLineGroup.height
+															--yAdjustment = (settings.size * renderXMLvars.fontInfo.ascent )- newDisplayLineGroup.height
+															yAdjustment = ( (settings.size / renderXMLvars.fontInfo.sampledFontSize ) * renderXMLvars.fontInfo.textHeight)- newDisplayLineGroup.height
 														end
 
 
@@ -2209,7 +2423,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 														})
 
 														newDisplayLineText:setFillColor(unpack(settings.color))
-														anchorZero(newDisplayLineText, textDisplayReferencePoint)
+														anchorZero(newDisplayLineText, renderXMLvars.textDisplayReferencePoint)
 														--newDisplayLineText.x, newDisplayLineText.y = 0, 0
 														--newDisplayLineText.alpha = settings.opacity
 
@@ -2285,7 +2499,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 													-- We now know the max char width in a font,
 													-- so we can start with a minimum based on that.
 													-- IF the metric was set!
-													if (not textwrapIsCached and not fontInfo.maxHorizontalAdvance) then
+													if (not textwrapIsCached and not renderXMLvars.fontInfo.maxHorizontalAdvance) then
 														-- Get stats for next line
 														-- Set the new min char count to the current line length, minus a few for protection
 														-- (20 is chosen from a few tests)
@@ -2294,7 +2508,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 
 												end
 											end
-											shortword = ""
+											renderXMLvars.shortword = ""
 										end
 
 									else
@@ -2306,8 +2520,8 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 								-- end for
 								---------------------------------------------
 
-								currentLine = currentLine .. shortword
-								shortword = ""
+								currentLine = currentLine .. renderXMLvars.shortword
+								renderXMLvars.shortword = ""
 
 								-- Allow for lines with beginning spaces, for positioning
 								if (usePeriodsForLineBeginnings and substring(currentLine,1,1) == ".") then
@@ -2451,8 +2665,8 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 									-- Since line heights are not predictable, we capture the yAdjustment based on
 									-- the actual height the first rendered line of text
 									if (not yAdjustment or yAdjustment == 0) then
-										--yAdjustment = (settings.size * fontInfo.ascent )- newDisplayLineGroup.height
-										yAdjustment = ( (settings.size / fontInfo.sampledFontSize ) * fontInfo.textHeight)- newDisplayLineGroup.height
+										--yAdjustment = (settings.size * renderXMLvars.fontInfo.ascent )- newDisplayLineGroup.height
+										yAdjustment = ( (settings.size / renderXMLvars.fontInfo.sampledFontSize ) * renderXMLvars.fontInfo.textHeight)- newDisplayLineGroup.height
 									end
 
 									createLinkingBox(newDisplayLineGroup, newDisplayLineText, currentLine, {250,0,0,30})
@@ -2475,7 +2689,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 						-- If the element was empty, it won't make it this far.
 						isFirstTextInBlock = false
 						
-						return result
+						return renderParsedElementResult
 
 
 					end -- renderParsedElement()
@@ -2612,6 +2826,27 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 					-- Ignore <style> and <script> blocks.
 					elseif (tag == "style" or tag == "script" or tag=="head" ) then
 						parsedText = {}
+
+					elseif (tag == "img") then
+
+						renderTextFromMargin = true
+						settings.currentXOffset = 0
+						lineY = lineY + settings.currentSpaceAfter
+						x = 0
+						if (attr.src ) then
+							if (funx.fileExists( attr.src )) then
+								local image = funx.loadImageFile( attr.src )
+								anchor(image, "TopLeft")
+								if ( attr.width or attr.height) then
+									funx.ScaleObjToSize (image, funx.applyPercent(attr.width, width), attr.height)
+								end
+								lineY = lineY + image.contentHeight - lineHeight
+								addToCurrentRenderedLine(image, x, lineY, textAlignment, settings, attr.src)
+							else
+								local e = renderParsedElement(1, "Missing picture: "..attr.src, "", "")
+								addToCurrentRenderedLine(e, x, lineY, textAlignment, settings, attr.src)
+							end
+						end
 					end
 
 					-- Render XML into lines of text
@@ -2681,6 +2916,13 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 						settings.currentXOffset = 0
 						isFirstLine = true
 						--elementCounter = 1
+					elseif (tag == "img") then
+						currentRenderedLineIndex = currentRenderedLineIndex + 1
+						setStyleFromTag (tag, attr)
+						renderTextFromMargin = true
+						settings.currentXOffset = 0
+						isFirstLine = true
+						--elementCounter = 1
 					elseif (tag == "li") then
 						setStyleFromTag (tag, attr)
 						currentRenderedLineIndex = currentRenderedLineIndex + 1
@@ -2725,7 +2967,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 					-- entering the tag
 
 					setStyleSettings(styleSettings)
-					return result
+					return renderParsedTextResult
 				end -- end function renderParsedText
 
 				------------------------------------------------------------
@@ -2735,7 +2977,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 				------------------------------------------------------------
 
 				local e = renderParsedText(parsedText, parsedText._tag, parsedText._attr)
-				result:insert(e)
+				renderXMLresult:insert(e)
 				e.anchorX, e.anchorY = 0, 0
 
 				-- This keeps centered/right aligned objects in the right place
@@ -2746,14 +2988,14 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 				
 				renderedLines = alignRenderedLines(renderedLines, renderedLinesStats)
 
-				return result
+				return renderXMLresult
 
 			end -- end renderXML
 
 
 			-- Render this chunk of XML
 			local oneXMLBlock = renderXML(restOLine)
-			result:insert(oneXMLBlock)
+			renderedTextblock:insert(oneXMLBlock)
 			oneXMLBlock.anchorX, oneXMLBlock.anchorY = 0, 0
 		end -- html elements for one paragraph
 
@@ -2763,10 +3005,10 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 	-- Finished rendering all blocks of text (all paragraphs).
 	-- Anchor the text block TOP-LEFT by default
 	-----------------------------
-	result.anchorChildren = false
-	result.yAdjustment = result.contentBounds.yMin
-	result.anchorChildren = true
-	result.anchorX, result.anchorY = 0,0
+	renderedTextblock.anchorChildren = false
+	renderedTextblock.yAdjustment = renderedTextblock.contentBounds.yMin
+	renderedTextblock.anchorChildren = true
+	renderedTextblock.anchorX, renderedTextblock.anchorY = 0,0
 	
 	
 	-- Cache the render if it wasn't cached already.
@@ -2782,11 +3024,12 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 --		print ("TESTING: Close DB")
 --	end
 
-	return result
+	return renderedTextblock
 end
 
 T.autoWrappedText = autoWrappedText
 T.clearAllCaches = clearAllCaches
+T.fitBlockToHeight = fitBlockToHeight
 
 -- OPEN CACHE DATABASE
 openCacheDB()
