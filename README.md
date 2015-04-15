@@ -167,7 +167,7 @@ The module recognizes the following HTML tags.
 - `<font>`
 - `<sup> <sub>`
 - `<a href="">`
-- `<img src="path-to-file">`
+- `<img src="path-to-file" directory="corona-directory">` (The corona directory can be "ResourceDirectory", "CachesDirectory", "DocumentsDirectory", or "TemporaryDirectory". Default is "ResourceDirectory".)
 
 You can also add many CSS `style` attributes to tags:
 - `text-align`
