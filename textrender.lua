@@ -1237,7 +1237,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 				if (params[9] and params[9] ~= "") then
 					settings.color = {tonumber(params[5]), tonumber(params[6]), tonumber(params[7]), funx.applyPercent(params[9], OPAQUE) }
 				else
-					settings.color = {tonumber(params[5]), tonumber(params[6]), tonumber(params[7], OPAQUE) }
+					settings.color = {tonumber(params[5]), tonumber(params[6]), tonumber(params[7]), OPAQUE }
 				end
 			end
 			-- width of the text block
@@ -3028,6 +3028,8 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 end
 
 T.autoWrappedText = autoWrappedText
+-- Allow new name for autowrapped text
+T.textrender = autoWrappedText
 T.clearAllCaches = clearAllCaches
 T.fitBlockToHeight = fitBlockToHeight
 
