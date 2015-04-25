@@ -1,0 +1,361 @@
+# Table of fonts and their variation names.
+# For some, like Avenir, this is not obvious.
+# Avenir Roman is the base, but the italic should be Avenir-Oblique, and
+# the bold would be Avenir-Medium.
+# We retain in this list the Roman fonts, just for reference,
+# e.g. #ArialMT = ArialMT
+
+#
+# iOS Fonts for iOS 6.0
+#
+
+#Academy Engraved LET
+#AcademyEngravedLetPlain = AcademyEngravedLetPlain
+
+#American Typewriter
+#AmericanTypewriter = AmericanTypewriter
+AmericanTypewriter-Bold = AmericanTypewriter-Bold
+AmericanTypewriter-Condensed = AmericanTypewriter-Condensed
+AmericanTypewriter-CondensedBold = AmericanTypewriter-CondensedBold
+AmericanTypewriter-CondensedLight = AmericanTypewriter-CondensedLight
+AmericanTypewriter-Light = AmericanTypewriter-Light
+
+#Apple Color Emoji
+#AppleColorEmoji = AppleColorEmoji
+
+#Apple SD Gothic Neo
+AppleSDGothicNeo-Bold = AppleSDGothicNeo-Bold
+AppleSDGothicNeo-Medium = AppleSDGothicNeo-Medium
+
+#Arial
+#ArialMT = ArialMT
+Arial-BoldItalicMT = Arial-BoldItalicMT
+Arial-BoldMT = Arial-BoldMT
+Arial-ItalicMT = Arial-ItalicMT
+
+#Arial Hebrew
+#ArialHebrew = ArialHebrew
+ArialHebrew-Bold = ArialHebrew-Bold
+
+#Arial Rounded MT Bold
+#ArialRoundedMTBold = ArialRoundedMTBold
+
+#ASafePlacetoFall-Italic = TalkingtotheMoon
+ASafePlacetoFall-Italic = ASafePlacetoFall
+
+
+#Avenir
+Avenir-Bold = Avenir-Medium
+Avenir-BoldItalic = Avenir-MediumOblique
+Avenir-Italic = Avenir-Oblique
+Avenir-Black = Avenir-Black
+Avenir-BlackOblique = Avenir-BlackOblique
+Avenir-Book = Avenir-Book
+Avenir-BookOblique = Avenir-BookOblique
+Avenir-Heavy = Avenir-Heavy
+Avenir-HeavyOblique = Avenir-HeavyOblique
+Avenir-Light = Avenir-Light
+Avenir-LightOblique = Avenir-LightOblique
+Avenir-Roman-Bold = Avenir-Medium
+Avenir-Roman-Italic = Avenir-Oblique
+
+#Avenir Next
+AvenirNext-Bold = AvenirNext-Bold
+AvenirNext-BoldItalic = AvenirNext-BoldItalic
+AvenirNext-DemiBold = AvenirNext-DemiBold
+AvenirNext-DemiBoldItalic = AvenirNext-DemiBoldItalic
+AvenirNext-Heavy = AvenirNext-Heavy
+AvenirNext-HeavyItalic = AvenirNext-HeavyItalic
+AvenirNext-Italic = AvenirNext-Italic
+AvenirNext-Medium = AvenirNext-Medium
+AvenirNext-MediumItalic = AvenirNext-MediumItalic
+AvenirNext-Regular = AvenirNext-Regular
+AvenirNext-UltraLight = AvenirNext-UltraLight
+AvenirNext-UltraLightItalic = AvenirNext-UltraLightItalic
+
+#Avenir Next Condensed
+AvenirNextCondensed-Bold = AvenirNextCondensed-Bold
+AvenirNextCondensed-BoldItalic = AvenirNextCondensed-BoldItalic
+AvenirNextCondensed-DemiBold = AvenirNextCondensed-DemiBold
+AvenirNextCondensed-DemiBoldItalic = AvenirNextCondensed-DemiBoldItalic
+AvenirNextCondensed-Heavy = AvenirNextCondensed-Heavy
+AvenirNextCondensed-HeavyItalic = AvenirNextCondensed-HeavyItalic
+AvenirNextCondensed-Italic = AvenirNextCondensed-Italic
+AvenirNextCondensed-Medium = AvenirNextCondensed-Medium
+AvenirNextCondensed-MediumItalic = AvenirNextCondensed-MediumItalic
+AvenirNextCondensed-Regular = AvenirNextCondensed-Regular
+AvenirNextCondensed-UltraLight = AvenirNextCondensed-UltraLight
+AvenirNextCondensed-UltraLightItalic = AvenirNextCondensed-UltraLightItalic
+
+#Bangla Sangam MN
+#BanglaSangamMN = BanglaSangamMN
+BanglaSangamMN-Bold = BanglaSangamMN-Bold
+
+#Baskerville = Baskerville
+Baskerville-Bold = Baskerville-Bold
+Baskerville-BoldItalic = Baskerville-BoldItalic
+Baskerville-Italic = Baskerville-Italic
+Baskerville-SemiBold = Baskerville-SemiBold
+Baskerville-SemiBoldItalic = Baskerville-SemiBoldItalic
+
+#Bodoni Ornaments
+#BodoniOrnamentsITCTT = BodoniOrnamentsITCTT
+
+#Bodoni 72
+BodoniSvtyTwoITCTT-Bold = BodoniSvtyTwoITCTT-Bold
+BodoniSvtyTwoITCTT-Book = BodoniSvtyTwoITCTT-Book
+BodoniSvtyTwoITCTT-BookIta = BodoniSvtyTwoITCTT-BookIta
+
+#Bodoni 72 Oldstyle
+BodoniSvtyTwoOSITCTT-Bold = BodoniSvtyTwoOSITCTT-Bold
+BodoniSvtyTwoOSITCTT-Book = BodoniSvtyTwoOSITCTT-Book
+BodoniSvtyTwoOSITCTT-BookIt = BodoniSvtyTwoOSITCTT-BookIt
+BodoniSvtyTwoSCITCTT-Book = BodoniSvtyTwoSCITCTT-Book
+
+#Bradley Hand
+BradleyHandITCTT-Bold = BradleyHandITCTT-Bold
+
+#Chalkboard SE
+ChalkboardSE-Bold = ChalkboardSE-Bold
+ChalkboardSE-Light = ChalkboardSE-Light
+ChalkboardSE-Regular = ChalkboardSE-Regular
+
+#Chalkduster
+#Chalkduster = Chalkduster
+
+#Cochin
+#Cochin = Cochin
+Cochin-Bold = Cochin-Bold
+Cochin-BoldItalic = Cochin-BoldItalic
+Cochin-Italic = Cochin-Italic
+
+#Copperplate
+#Copperplate = Copperplate
+Copperplate-Bold = Copperplate-Bold
+Copperplate-Light = Copperplate-Light
+
+#Courier
+#Courier = Courier
+Courier-Bold = Courier-Bold
+Courier-BoldOblique = Courier-BoldOblique
+Courier-Oblique = Courier-Oblique
+
+#Courier New
+CourierNewPS-BoldItalicMT = CourierNewPS-BoldItalicMT
+CourierNewPS-BoldMT = CourierNewPS-BoldMT
+CourierNewPS-ItalicMT = CourierNewPS-ItalicMT
+#CourierNewPSMT = CourierNewPSMT
+
+#CrimsonText-Roman
+CrimsonText = CrimsonText-Roman
+CrimsonText-Bold = CrimsonText-Semibold
+CrimsonText-BoldItalic = CrimsonText-SemiboldItalic
+CrimsonText-Italic = CrimsonText-Italic
+
+#DB LCD Temp
+#DBLCDTempBlack = DBLCDTempBlack
+
+#Devanagari Sangam MN
+#DevanagariSangamMN = DevanagariSangamMN
+DevanagariSangamMN-Bold = DevanagariSangamMN-Bold
+
+#Didot
+#Didot = Didot
+Didot-Bold = Didot-Bold
+Didot-Italic = Didot-Italic
+
+#Euphemia UCAS
+#EuphemiaUCAS = EuphemiaUCAS
+EuphemiaUCAS-Bold = EuphemiaUCAS-Bold
+EuphemiaUCAS-Italic = EuphemiaUCAS-Italic
+
+#Futura
+Futura-CondensedExtraBold = Futura-CondensedExtraBold
+Futura-CondensedMedium = Futura-CondensedMedium
+Futura-Medium = Futura-Medium
+Futura-MediumItalic = Futura-MediumItalic
+
+#Geeza Pro
+#GeezaPro = GeezaPro
+GeezaPro-Bold = GeezaPro-Bold
+
+#Georgia
+#Georgia = Georgia
+Georgia-Bold = Georgia-Bold
+Georgia-BoldItalic = Georgia-BoldItalic
+Georgia-Italic = Georgia-Italic
+
+#Gill Sans
+#GillSans = GillSans
+GillSans-Bold = GillSans-Bold
+GillSans-BoldItalic = GillSans-BoldItalic
+GillSans-Italic = GillSans-Italic
+GillSans-Light = GillSans-Light
+GillSans-LightItalic = GillSans-LightItalic
+
+#Gujarati Sangam MN
+#GujaratiSangamMN = GujaratiSangamMN
+GujaratiSangamMN-Bold = GujaratiSangamMN-Bold
+
+#Gurmukhi MN
+#GurmukhiMN = GurmukhiMN
+GurmukhiMN-Bold = GurmukhiMN-Bold
+
+#Heiti SC
+STHeitiSC-Light = STHeitiSC-Light
+STHeitiSC-Medium = STHeitiSC-Medium
+
+#Heiti TC
+STHeitiTC-Light = STHeitiTC-Light
+STHeitiTC-Medium = STHeitiTC-Medium
+
+#Helvetica
+#Helvetica = Helvetica
+Helvetica-Bold = Helvetica-Bold
+Helvetica-BoldOblique = Helvetica-BoldOblique
+Helvetica-Light = Helvetica-Light
+Helvetica-LightOblique = Helvetica-LightOblique
+Helvetica-Oblique = Helvetica-Oblique
+
+#Helvetica Neue
+#HelveticaNeue = HelveticaNeue
+HelveticaNeue-Bold = HelveticaNeue-Bold
+HelveticaNeue-BoldItalic = HelveticaNeue-BoldItalic
+HelveticaNeue-CondensedBlack = HelveticaNeue-CondensedBlack
+HelveticaNeue-CondensedBold = HelveticaNeue-CondensedBold
+HelveticaNeue-Italic = HelveticaNeue-Italic
+HelveticaNeue-Light = HelveticaNeue-Light
+HelveticaNeue-LightItalic = HelveticaNeue-LightItalic
+HelveticaNeue-Medium = HelveticaNeue-Medium
+HelveticaNeue-UltraLight = HelveticaNeue-UltraLight
+HelveticaNeue-UltraLightItalic = HelveticaNeue-UltraLightItalic
+
+#Hiragino Kaku Gothic ProN
+HiraKakuProN-W3 = HiraKakuProN-W3
+HiraKakuProN-W6 = HiraKakuProN-W6
+
+#Hiragino Mincho ProN
+HiraMinProN-W3 = HiraMinProN-W3
+HiraMinProN-W6 = HiraMinProN-W6
+
+#Hoefler Text
+HoeflerText-Black = HoeflerText-Black
+HoeflerText-BlackItalic = HoeflerText-BlackItalic
+HoeflerText-Italic = HoeflerText-Italic
+HoeflerText-Regular = HoeflerText-Regular
+
+
+#JournalBold
+JournalBold-Bold = JournalBold
+JournalText-Bold = JournalBold
+JournalText-Italic = JournalItalic
+
+#Kailasa
+#Kailasa = Kailasa
+Kailasa-Bold = Kailasa-Bold
+
+#Kannada Sangam MN
+#KannadaSangamMN = KannadaSangamMN
+KannadaSangamMN-Bold = KannadaSangamMN-Bold
+
+#Malayalam Sangam MN
+#MalayalamSangamMN = MalayalamSangamMN
+MalayalamSangamMN-Bold = MalayalamSangamMN-Bold
+
+#Marion
+Marion-Bold = Marion-Bold
+Marion-Italic = Marion-Italic
+Marion-Regular = Marion-Regular
+
+#Marker Felt
+MarkerFelt-Thin = MarkerFelt-Thin
+MarkerFelt-Wide = MarkerFelt-Wide
+
+#Noteworthy
+Noteworthy-Bold = Noteworthy-Bold
+Noteworthy-Light = Noteworthy-Light
+
+#Optima
+Optima-Bold = Optima-Bold
+Optima-BoldItalic = Optima-BoldItalic
+Optima-ExtraBlack = Optima-ExtraBlack
+Optima-Italic = Optima-Italic
+Optima-Regular = Optima-Regular
+
+#Oriya Sangam MN
+#OriyaSangamMN = OriyaSangamMN
+OriyaSangamMN-Bold = OriyaSangamMN-Bold
+
+#Palatino
+Palatino-Bold = Palatino-Bold
+Palatino-BoldItalic = Palatino-BoldItalic
+Palatino-Italic = Palatino-Italic
+Palatino-Roman = Palatino-Roman
+
+#Papyrus
+#Papyrus = Papyrus
+Papyrus-Condensed = Papyrus-Condensed
+
+#Party LET
+#PartyLetPlain = PartyLetPlain
+
+#Sinhala Sangam MN
+#SinhalaSangamMN = SinhalaSangamMN
+SinhalaSangamMN-Bold = SinhalaSangamMN-Bold
+
+#Snell Roundhand
+#SnellRoundhand = SnellRoundhand
+SnellRoundhand-Black = SnellRoundhand-Black
+SnellRoundhand-Bold = SnellRoundhand-Bold
+
+#Symbol
+#Symbol = Symbol
+
+#Tamil Sangam MN
+#TamilSangamMN = TamilSangamMN
+TamilSangamMN-Bold = TamilSangamMN-Bold
+
+#Telugu Sangam MN
+#TeluguSangamMN = TeluguSangamMN
+TeluguSangamMN-Bold = TeluguSangamMN-Bold
+
+#Thonburi
+#Thonburi = Thonburi
+Thonburi-Bold = Thonburi-Bold
+
+#Times New Roman
+TimesNewRomanPS-BoldItalicMT = TimesNewRomanPS-BoldItalicMT
+TimesNewRomanPS-BoldMT = TimesNewRomanPS-BoldMT
+TimesNewRomanPS-ItalicMT = TimesNewRomanPS-ItalicMT
+#TimesNewRomanPSMT = TimesNewRomanPSMT
+
+#Trebuchet MS
+Trebuchet-BoldItalic = Trebuchet-BoldItalic
+#TrebuchetMS = TrebuchetMS
+TrebuchetMS-Bold = TrebuchetMS-Bold
+TrebuchetMS-Italic = TrebuchetMS-Italic
+
+#Verdana
+#Verdana = Verdana
+Verdana-Bold = Verdana-Bold
+Verdana-BoldItalic = Verdana-BoldItalic
+Verdana-Italic = Verdana-Italic
+
+#Zapf Dingbats
+#ZapfDingbatsITC = ZapfDingbatsITC
+
+#Zapfino
+#Zapfino = Zapfino
+
+
+#
+# Custom Fonts
+#
+
+#Crimson Text
+#CrimsonText-Roman = CrimsonText-Roman
+CrimsonText-Roman-Italic = CrimsonText-Italic
+CrimsonText-Roman-Bold = CrimsonText-Bold
+CrimsonText-Roman-Bold-Italic = CrimsonText-BoldItalic
+
+

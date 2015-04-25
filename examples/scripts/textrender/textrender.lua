@@ -1911,7 +1911,6 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 								lineY = ascent
 							end
 
-
 							-- Set the current width of the column, factoring in indents
 							-- Need the width to figure out how many words fit.
 							settings.currentWidth = settings.width - settings.leftIndent - settings.rightIndent - settings.currentFirstLineIndent
@@ -2145,6 +2144,9 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 											-- as text, then move down a line on the screen and start again.
 											if (renderTextFromMargin) then
 												tempLineWidth = tempDisplayLineTxt.width
+
+--print ("isFirstLineInElement",isFirstLineInElement, isFirstLine, tempLineTrimmed)
+
 												if (isFirstLine) then
 													settings.currentFirstLineIndent = settings.firstLineIndent
 												else
@@ -2152,12 +2154,10 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 												end
 											else
 												tempLineWidth = tempDisplayLineTxt.width + settings.currentXOffset
-												--settings.currentFirstLineIndent = 0
 											end
 
 											display.remove(tempDisplayLineTxt);
 											tempDisplayLineTxt=nil;
-
 
 
 											-- ===================================
@@ -2165,7 +2165,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 											-- This text may be an element inside a first line, so we must include the currentFirstLineIndent to calc the current line width.
 											-- Since indents may change per line, we have to reset this each time.
 											settings.currentWidth = settings.width - settings.leftIndent - settings.rightIndent - settings.currentFirstLineIndent
-
+--print (settings.currentFirstLineIndent, tempLineTrimmed)
 											if (tempLineWidth <= settings.currentWidth * widthCorrection)  then
 												-- Do not render line, unless it is the last word,
 												-- in which case render ("C" render)
@@ -2698,7 +2698,9 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 									end
 
 									createLinkingBox(newDisplayLineGroup, newDisplayLineText, currentLine, {250,0,0,30})
-									
+
+--print (isFirstLine, isFirstTextInBlock, "C: Final line: ["..currentLine.."]", "length=" .. strlen(currentLine))
+
 									isFirstLine = false
 									renderTextFromMargin = false
 
@@ -2857,11 +2859,11 @@ multiplier = 1
 							--settings.rightIndent = stacks.list[stacks.list.ptr].rightIndent
 							--settings.padding = stacks.list[stacks.list.ptr].padding
 							
-print ("B ---")
+--print ("B ---")
 --print ("settings.currentFirstLineIndent",settings.currentFirstLineIndent)
 --print ("settings.currentLeftIndent",settings.currentLeftIndent)
-print ("settings.leftIndent",settings.leftIndent, stacks.list[stacks.list.ptr].leftIndent)
-print ("---")
+--print ("settings.leftIndent",settings.leftIndent, stacks.list[stacks.list.ptr].leftIndent)
+--print ("---")
 
 							stacks.list[stacks.list.ptr] = stacks.list[stacks.list.ptr] or {}
 							-- default for list is a disk.

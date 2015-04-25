@@ -1,0 +1,27 @@
+#SAMPLE TEXT STYLES
+# TEXT STYLES FOR CORONA GRAPHICS v2 (values between 0-1)
+
+# style = font, size, leading, R,G,B, width, opacity, NORMAL|ALL_CAPS, text alignment, spaceBefore, spaceAfter, firstLineIndent, leftIndent, rightIndent
+
+#generic styles
+Normal = Avenir-Book,16,20,0,0,0,,100%
+Heading = Avenir-Bold,16,20,0,0,0,,100%
+Title=Avenir-Light,24,40,128,128,128,,100%,NORMAL,left,0,0,0,0,0
+H1=,18,26,0,0,0,,100%,NORMAL,left,12,4,0,0,0
+H2=Avenir-Book,18,26,0,0,0,,100%,NORMAL,left,12,4,0,0,0
+H2 Light=Avenir-Book,18,26,220,220,220,,100%,NORMAL,left,12,4,0,0,0
+H3=,16,26,0,0,0,,100%,NORMAL,left,8,0,0,0,0
+H4=,16,26,0,0,0,,100%,NORMAL,left,8,0,0,0,0
+H6=,16,26,0,0,0,,100%,NORMAL,left,8,0,0,0,0
+H5=,16,26,0,0,0,,100%,NORMAL,left,8,0,0,0,0
+Quote = Avenir-Light,20,28,200,255,20,,100%
+
+# Default settings for hanging text in lists
+li = ,,,,,,,,, left,0,0,-30,30,0
+
+
+# testing styles
+LeftIndent = Baskerville,16,24, 0,0,0,,100%, NORMAL, left,0,0,50,0,0
+Left = 		Baskerville,16,24, 0,0,0,,100%, NORMAL,left,0,0,0,0,0
+Right = 	Baskerville,16,24, 0,0,0,,100%, NORMAL,right,0,0,0,0,0
+Center = 	Baskerville,16,24, 0,0,0,,100%, NORMAL,center,0,0,0,0,0

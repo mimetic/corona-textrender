@@ -28,8 +28,6 @@ DEALINGS IN THE SOFTWARE.
 -- USEFUL FUNCTIONS.
 -- ===================
 
-print ("THIS IS THE FUNX INSIDE THE CORONA-TEXTRENDER")
-
 local FUNX = {}
 
 -- Requires json library

@@ -15,9 +15,6 @@ H6=,16,26,0,0,0,,100%,NORMAL,left,8,0,0,0,0
 H5=,16,26,0,0,0,,100%,NORMAL,left,8,0,0,0,0
 Quote = Avenir-Light,20,28,200,255,20,,100%
 
-# Default settings for hanging text in lists
-li = ,,,,,,,,, left,0,0,-30,30,0
-
 # styles for the library
 eventListRowTime=AvenirNextCondensed-Medium,16,16,0.5,0.5,0.5,,100%,NORMAL,right,0,-20,0,0,0
 eventListRowTitle=AvenirNext-Medium,20,26,0,0,0,,100%,NORMAL,left,0,30,0,0,0
