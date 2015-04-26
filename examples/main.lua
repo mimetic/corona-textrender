@@ -123,7 +123,7 @@ local params = {
 	text =  mytext,	--loaded above
 	
 	width = width,
-	maxHeight = height,
+	maxHeight = 0,	-- Set to zero, otherwise rendering STOPS after this amount!
 
 	isHTML = true,
 	useHTMLSpacing = true,

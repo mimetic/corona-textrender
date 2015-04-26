@@ -49,6 +49,7 @@ DEALINGS IN THE SOFTWARE.
 
 -- TESTING
 local testing = false
+
 -- Don't use the line-wrap cache
 local noCache = false
 if (noCache) then
@@ -123,7 +124,7 @@ local function showTestLine(group, y, isFirstTextInBlock, i)
 	local q = display.newLine(group, 0,y,200,y)
 	i = i or 1
 	if (isFirstTextInBlock) then
-		q:setStrokeColor(250,0,0)
+		q:setStrokeColor(100,250,0)
 	else
 		q:setStrokeColor(80 * i,80 * i, 80)
 	end
@@ -1133,9 +1134,13 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 	local scalingRatio = funx.scaleFactorForRetina()
 
 	local currentLine = ''
+	
 	local lineCount = 0
-	-- x is start of line
+	
+	-- First line of text
 	local lineY = 0
+
+	-- x is start of line
 	local x = 0
 
 	local defaultSettings = {}
@@ -1530,8 +1535,12 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 	-- Set the initial left side to 0
 	-- (FYI, the var is defined far above here!)
 	x = 0
-	local isFirstTextInBlock = true
-	local isFirstLine = true
+	
+	-- Flag for very first text in the entire XML block of text.
+	settings.isFirstTextInBlock = true
+	
+	-- Flag for first line of text of a chunk of text that ends with a return, like a paragraph.
+	settings.isFirstLine = true
 
 
 	-- And adjustment to better position the text.
@@ -1653,7 +1662,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 			-- stick this here cuz it needs the closure variables
 			---------
 			local function renderXML (xmlChunk)
-				
+			
 				local renderXMLvars = {}
 				local renderXMLresult = display.newGroup()
 				-- Need this positioniong rect so lines can be right/center justified inside of the result group
@@ -1680,7 +1689,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 					settings.currentFirstLineIndent = settings.firstLineIndent
 					settings.currentSpaceBefore = settings.spaceBefore
 					settings.currentSpaceAfter = settings.spaceAfter
-					isFirstLine = true
+					settings.isFirstLine = true
 				end
 
 				if (lineBreakType == "soft") then
@@ -1737,6 +1746,10 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 
 				-- Start rendering this text at the margin
 				local renderTextFromMargin = true
+
+				-- If this is an inline element, then apply 1st line indent
+				-- if needed. To begin, we are definitely on a first line.
+				settings.elementOnFirstLine = true
 
 				-- Track which element we are rendering. Only the first element starts at the margin,
 				-- all following elements continue on the lines and are wrapped, unless
@@ -1825,7 +1838,6 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 					------------------------------------------------------------
 					-- Function to render one parsed XML element, i.e a block of text
 					-- An element would be, for example: <b>piece of text</b>
-					-- NOT a <p>, but perhaps something inside <p></p>
 					------------------------------------------------------------
 					local function renderParsedElement(elementNum, element, tag, attr)
 
@@ -1840,7 +1852,6 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 							local tempLine, allTextInLine
 							local wordlen = 0
 							
-							local isFirstLineInElement = true
 
 							-- =======================================================
 							-- FUNCTIONS
@@ -1854,7 +1865,10 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 								
 								if (testing) then
 
-									testBkgdColor = testBkgdColor or {250,250,100,30}
+									testBkgdColor = testBkgdColor or {1,1,0.5,0.2}
+									firstLineColor = firstLineColor or {1,0,0, 0.2}
+									onFirstLineColor = firstLineColor or {0,1,0, 0.2}
+									otherLinesColor = otherLinesColor or {0, 0, 1, 0.2}
 
 									-- when drawing the box, we compensate for the stroke, thus -2
 									local r = display.newRect(newDisplayLineGroup, 0, 0, newDisplayLineText.width-2, newDisplayLineText.height-2)
@@ -1862,9 +1876,28 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 									anchor(r, "BottomLeft")
 									r.x = newDisplayLineText.x+1
 									r.y = newDisplayLineText.y+1
+									
+									--if (settings.isFirstLine) then
+if (settings.elementOnFirstLine) then
+	print (" ************ ")
+end
+									
+									-- FALSE = show first line values, TRUE = show A or C render 
+									if (false) then
+										if (settings.elementOnFirstLine) then
+											r:setStrokeColor( unpack (onFirstLineColor) )
+											r:setFillColor(unpack(onFirstLineColor))
+										elseif (settings.isFirstLine) then
+											r:setStrokeColor( unpack (firstLineColor) )
+											r:setFillColor(unpack(firstLineColor))
+										else
+											r:setStrokeColor( unpack (otherLinesColor) )
+											r:setFillColor(unpack(otherLinesColor))
+										end
+									else
+										r:setFillColor(unpack(testBkgdColor))
+									end
 
-									r:setFillColor(unpack(testBkgdColor))
-									r:setStrokeColor(0,250,250,125)
 
 									r.isVisible = testing
 								end
@@ -1907,10 +1940,10 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 
 							-- If we're at the very first line of a text block, these
 							-- start at the Ascent, following InDesign defaults.
-							if (isFirstTextInBlock) then
+							if (settings.isFirstTextInBlock) then
 								lineY = ascent
+								settings.isFirstTextInBlock = false
 							end
-
 
 							-- Set the current width of the column, factoring in indents
 							-- Need the width to figure out how many words fit.
@@ -1970,10 +2003,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 							-- which happens if you make some sort of mathematical formula,
 							-- we have to capture it differently.
 							local isSingleHyphen = string.match(nextChunk, '^%s-(%-)%s-')
-							
---if (isSingleHyphen) then
---	print ("nextChunk ["..nextChunk.."]", isSingleHyphen)
---end
+
 							-- Preserve initial padding before first word
 							-- This captures spaces and hyphens!
 							if (not isSingleHyphen) then
@@ -2017,8 +2047,8 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 									local cachedItem = getCachedChunkItem(cachedChunk, cachedChunkIndex)
 									
 									-- Cached values
-									local isFirstLine = cachedItem.isFirstLine
-									local renderTextFromMargin = cachedItem.renderTextFromMargin
+									settings.isFirstLine = cachedItem.isFirstLine
+									settings.elementOnFirstLine = cachedItem.elementOnFirstLine
 
 									lineHeight = cachedItem.lineHeight
 									renderXMLvars.currentRenderedLineIndex = cachedItem.renderXMLvars.currentRenderedLineIndex
@@ -2078,7 +2108,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 									print ("")
 								end
 
-								---------------------------------------------
+							---------------------------------------------
 								--local word,spacer
 								local word, spacer, longword
 								for word, spacer in words do
@@ -2117,7 +2147,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 											-- ===================================
 											local firstLineIndent, leftIndent, rightIndent
 
-											if (isFirstLine) then
+											if (settings.elementOnFirstLine) then
 												firstLineIndent = settings.firstLineIndent
 											end
 										
@@ -2145,19 +2175,18 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 											-- as text, then move down a line on the screen and start again.
 											if (renderTextFromMargin) then
 												tempLineWidth = tempDisplayLineTxt.width
-												if (isFirstLine) then
+
+												if (settings.isFirstTextInBlock or settings.elementOnFirstLine) then
 													settings.currentFirstLineIndent = settings.firstLineIndent
 												else
 													settings.currentFirstLineIndent = 0
 												end
 											else
 												tempLineWidth = tempDisplayLineTxt.width + settings.currentXOffset
-												--settings.currentFirstLineIndent = 0
 											end
 
 											display.remove(tempDisplayLineTxt);
 											tempDisplayLineTxt=nil;
-
 
 
 											-- ===================================
@@ -2165,7 +2194,6 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 											-- This text may be an element inside a first line, so we must include the currentFirstLineIndent to calc the current line width.
 											-- Since indents may change per line, we have to reset this each time.
 											settings.currentWidth = settings.width - settings.leftIndent - settings.rightIndent - settings.currentFirstLineIndent
-
 											if (tempLineWidth <= settings.currentWidth * widthCorrection)  then
 												-- Do not render line, unless it is the last word,
 												-- in which case render ("C" render)
@@ -2189,23 +2217,22 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 			print ()
 			print ("----------------------------")
 			print ("A: Render line: ["..currentLine .. "]")
-			print ("renderXMLvars.currentRenderedLineIndex:", renderXMLvars.currentRenderedLineIndex)
-			--														print ("Font: [".. settings.font .. "]")
+--			print ("renderXMLvars.currentRenderedLineIndex:", renderXMLvars.currentRenderedLineIndex)
+--			print ("Font: [".. settings.font .. "]")
 			print ("settings.currentWidth",settings.currentWidth)
-			print ("isFirstLine", isFirstLine)
+			print ("settings.isFirstLine", settings.isFirstLine)
+			print ("settings.elementOnFirstLine", settings.elementOnFirstLine)
+			print ("settings.isFirstTextInBlock", settings.isFirstTextInBlock)
 			print ("renderTextFromMargin: ", renderTextFromMargin)
 			print ("lineY = ",lineY)
 			-- print ("   newDisplayLineGroup.y = ",lineY + descent .. " + " .. descent)
 		end
 
-														if (isFirstLine) then
+														if (settings.isFirstLine) then
 															currentLineHeight = lineHeight
 															settings.currentSpaceBefore = settings.spaceBefore
-															isFirstLine = false
+															settings.isFirstLine = false
 															settings.currentFirstLineIndent = settings.firstLineIndent
-															if (not isFirstTextInBlock and renderTextFromMargin) then
-																--lineY = lineY + currentLineHeight + settings.currentSpaceBefore
-															end
 														else
 															currentLineHeight = lineHeight
 															settings.currentSpaceBefore = 0
@@ -2241,10 +2268,8 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 														})
 														newDisplayLineText:setFillColor(unpack(settings.color))
 														anchorZero(newDisplayLineText, "BottomLeft")
-													
-														-- 
-														if (renderTextFromMargin and isFirstLineInElement) then
-															isFirstLineInElement = false
+
+														if (renderTextFromMargin) then
 															renderXMLvars.currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex + 1
 														end
 
@@ -2278,7 +2303,8 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 																		currentXOffset = settings.currentXOffset,
 
 																		renderTextFromMargin = renderTextFromMargin,
-																		isFirstLine = isFirstLine,
+																		isFirstLine = settings.isFirstLine,
+																		elementOnFirstLine = settings.elementOnFirstLine,
 
 																		currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex,
 																	})
@@ -2342,6 +2368,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 														-- And, we should now move our line cursor to the next row.
 														-- We know nothing can continue on this line because we've filled it up.
 														lineY = lineY + currentLineHeight
+														settings.elementOnFirstLine = false
 
 														-- Text lines can vary in height depending on whether there are upper case letters, etc.
 														-- Not predictable! So, we capture the height of the first line, and that is the basis of
@@ -2355,11 +2382,11 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 
 
 													else
-
 														--longword = true
 														renderTextFromMargin = true
 														settings.currentXOffset = 0
 														lineY = lineY + currentLineHeight
+														settings.elementOnFirstLine = false
 													end
 
 
@@ -2404,19 +2431,16 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 		print ("----------------------------")
 		print ("B: render a word: "..word)
 		print ("\nrenderTextFromMargin reset to TRUE.")
-		print ("isFirstLine", isFirstLine)
+		print ("settings.isFirstLine", settings.isFirstLine)
 		print ("   newDisplayLineGroup.y",lineY + descent, descent)
 		print ("leftIndent + currentFirstLineIndent", settings.leftIndent, settings.currentFirstLineIndent, settings.currentXOffset)
 	end
 
-														if (isFirstLine) then
+														if (settings.isFirstLine) then
 															currentLineHeight = lineHeight
 															settings.currentSpaceBefore = settings.spaceBefore
-															isFirstLine = false
+															settings.isFirstLine = false
 															settings.currentFirstLineIndent = settings.firstLineIndent
-															if (not isFirstTextInBlock and renderTextFromMargin) then
-																--lineY = lineY + currentLineHeight + settings.currentSpaceBefore
-															end
 														else
 															currentLineHeight = lineHeight
 															settings.currentSpaceBefore = 0
@@ -2455,8 +2479,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 														--newDisplayLineText.x, newDisplayLineText.y = 0, 0
 														--newDisplayLineText.alpha = settings.opacity
 
-														if (renderTextFromMargin and isFirstLineInElement) then
-															isFirstLineInElement = false
+														if (renderTextFromMargin) then
 															renderXMLvars.currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex + 1
 														end
 
@@ -2490,7 +2513,8 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 																		currentXOffset = settings.currentXOffset,
 
 																		renderTextFromMargin = renderTextFromMargin,
-																		isFirstLine = isFirstLine,
+																		isFirstLine = settings.isFirstLine,
+																		elementOnFirstLine = settings.elementOnFirstLine,
 
 																		currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex,
 																	})
@@ -2514,6 +2538,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 														-- so the next line surely must be the beginning
 														-- a new line. We know nothing can continue on this line because we've filled it up.
 														lineY = lineY + currentLineHeight
+														settings.elementOnFirstLine = false
 
 														renderTextFromMargin = true
 														settings.currentXOffset = 0
@@ -2572,42 +2597,37 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 										print ()
 										print ("----------------------------")
 										print ("C: Final line: ["..currentLine.."]", "length=" .. strlen(currentLine))
-										print ("Font: [".. settings.font .. "]")
-										print ("renderXMLvars.currentRenderedLineIndex:", renderXMLvars.currentRenderedLineIndex)
-										print ("isFirstLine", isFirstLine)
+--										print ("Font: [".. settings.font .. "]")
+--										print ("renderXMLvars.currentRenderedLineIndex:", renderXMLvars.currentRenderedLineIndex)
+										print ("lineY = ",lineY)
+										print ("settings.isFirstLine", settings.isFirstLine)
+										print ("settings.isFirstTextInBlock", settings.isFirstTextInBlock)
 										print ("renderTextFromMargin: ", renderTextFromMargin)
 										print ("Width,", settings.width)
 										print ("settings.currentWidth", settings.currentWidth)
-										print ("textAlignment: ", textAlignment)
-										print ("lineHeight: ", lineHeight)
+--										print ("textAlignment: ", textAlignment)
+--										print ("lineHeight: ", lineHeight)
 
 									end
 
 								
-									if (isFirstLine) then
+									if (settings.isFirstLine) then
 										currentLineHeight = lineHeight
 										settings.currentSpaceBefore = settings.spaceBefore
 										settings.currentFirstLineIndent = settings.firstLineIndent
-										-- If first line of a block of text, then we must start on a new line.
-										-- Jump to next line to start this text
-										if (not isFirstTextInBlock and renderTextFromMargin ) then
-											--lineY = lineY + currentLineHeight + settings.currentSpaceBefore
-										end
-										--renderTextFromMargin = true
 									else
 										currentLineHeight = lineHeight
-										settings.currentFirstLineIndent = 0
 										settings.currentSpaceBefore = 0
-										-- Not first line in a block of text, there might be something before it on the line,
-										-- e.g. a Bold/Italic block, so do not jump to next row
-										--lineY = lineY + currentLineHeight
+										if (not settings.elementOnFirstLine) then
+											settings.currentFirstLineIndent = 0
+										end
 									end
 
 									if (renderTextFromMargin) then
 										currentLine = ltrim(currentLine)
 										settings.currentXOffset = 0
 										settings.currentLeftIndent = settings.leftIndent
-									else
+									elseif (not settings.elementOnFirstLine ) then
 										settings.currentFirstLineIndent = 0
 										settings.currentLeftIndent = 0
 									end
@@ -2638,7 +2658,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 									newDisplayLineText:setFillColor(unpack(settings.color))
 									anchorZero(newDisplayLineText, "BottomLeft")
 
-									if (renderTextFromMargin and not isFirstLine) then
+									if (renderTextFromMargin and not settings.isFirstLine) then
 										renderXMLvars.currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex + 1
 									end
 
@@ -2672,7 +2692,9 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 													currentXOffset = settings.currentXOffset,
 
 													renderTextFromMargin = renderTextFromMargin,
-													isFirstLine = isFirstLine,
+													isFirstLine = settings.isFirstLine,
+													elementOnFirstLine = settings.elementOnFirstLine,
+
 
 													currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex,
 												})
@@ -2697,9 +2719,11 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 										yAdjustment = ( (settings.size / renderXMLvars.fontInfo.sampledFontSize ) * renderXMLvars.fontInfo.textHeight)- newDisplayLineGroup.height
 									end
 
-									createLinkingBox(newDisplayLineGroup, newDisplayLineText, currentLine, {250,0,0,30})
-									
-									isFirstLine = false
+									createLinkingBox(newDisplayLineGroup, newDisplayLineText, currentLine, {1,0,0,0.3})
+
+print ("2702 settings.isFirstLine, settings.elementOnFirstLine, lineY: ", settings.isFirstLine, settings.elementOnFirstLine, lineY, "C: Final line: ["..currentLine.."]")
+
+									settings.isFirstLine = false
 									renderTextFromMargin = false
 
 									-- Clear the current line
@@ -2713,10 +2737,6 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 								cacheIndex = cacheIndex + 1							
 						end -- cached/not cached if
 
-						-- This will only be changed if we rendered an element.
-						-- If the element was empty, it won't make it this far.
-						isFirstTextInBlock = false
-						
 						return renderParsedElementResult
 
 
@@ -2743,7 +2763,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 					if (tag == "p" or tag == "div" or tag == "li" or tag == "ul" or tag == "ol") then
 
 						-- Reset margins, cursor, etc. to defaults
-												
+						settings.elementOnFirstLine = true
 						renderTextFromMargin = true
 						settings.currentXOffset = 0
 						x = 0
@@ -2773,7 +2793,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 						settings.currentSpaceAfter = settings.spaceAfter
 
 						-- Opening <p> makes us jump down one line.
-						if (not isFirstTextInBlock and renderTextFromMargin) then
+						if (renderTextFromMargin) then
 							lineY = lineY + lineHeight + settings.currentSpaceBefore
 						end
 						
@@ -2802,15 +2822,6 @@ multiplier = 1
 							--settings.currentLeftIndent = settings.leftIndent + multiplier * indent
 							--settings.currentFirstLineIndent = settings.leftIndent + multiplier * indent
 							
-							
---print ("A ---")
---print ("settings.currentFirstLineIndent",settings.currentFirstLineIndent)
---print ("settings.currentLeftIndent",settings.currentLeftIndent)
---print ("settings.leftIndent",settings.leftIndent)
---print ("multiplier",multiplier)
---print ("---")
-
-
 							--settings.currentXOffset = settings.listIndent
 							stacks.list.ptr =  stacks.list.ptr + 1
 							local b = ""
@@ -2852,16 +2863,6 @@ multiplier = 1
 							if (attr.value) then
 								stacks.list[stacks.list.ptr].line = tonumber(attr.value)
 							end
-							
-							--settings.leftIndent = stacks.list[stacks.list.ptr].leftIndent
-							--settings.rightIndent = stacks.list[stacks.list.ptr].rightIndent
-							--settings.padding = stacks.list[stacks.list.ptr].padding
-							
-print ("B ---")
---print ("settings.currentFirstLineIndent",settings.currentFirstLineIndent)
---print ("settings.currentLeftIndent",settings.currentLeftIndent)
-print ("settings.leftIndent",settings.leftIndent, stacks.list[stacks.list.ptr].leftIndent)
-print ("---")
 
 							stacks.list[stacks.list.ptr] = stacks.list[stacks.list.ptr] or {}
 							-- default for list is a disk.
@@ -2988,14 +2989,16 @@ print ("---")
 
 							-- Text that has no wrapper, i.e. that isn't inside of <p> or <ol>, etc.,
 							-- will be tagged 'body' and should be treated like <p>
+							--[[
 							if  (element and element ~= " " and tag == "body") then
 								lineY = lineY + lineHeight + settings.currentSpaceAfter
 							end
+							--]]
 
 --print ("B-Tag",tag, element, currentXOffset)
 							local saveStyleSettings = getAllStyleSettings()
 							
-							--if (isFirstLine and tag == "p" or tag == "div" or tag == "li" or tag == "ul") then
+							--if (settings.isFirstLine and tag == "p" or tag == "div" or tag == "li" or tag == "ul") then
 								--element = trim(element)
 							--end
 							local e = renderParsedElement(n, element, tag, attr)
@@ -3020,21 +3023,21 @@ print ("---")
 						--lineY = lineY + currentLineHeight + settings.currentSpaceAfter
 
 						-- Reset the first line of paragraph flag
-						isFirstLine = true
+						settings.isFirstLine = true
 						elementCounter = 1
 					elseif (tag == "br") then
 						renderXMLvars.currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex + 1
 						setStyleFromTag (tag, attr)
 						renderTextFromMargin = true
 						settings.currentXOffset = 0
-						isFirstLine = true
+						settings.isFirstLine = true
 						--elementCounter = 1
 					elseif (tag == "img") then
 						renderXMLvars.currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex + 1
 						setStyleFromTag (tag, attr)
 						renderTextFromMargin = true
 						settings.currentXOffset = 0
-						isFirstLine = true
+						settings.isFirstLine = true
 						--elementCounter = 1
 					elseif (tag == "li") then
 						setStyleFromTag (tag, attr)
@@ -3042,7 +3045,7 @@ print ("---")
 						renderTextFromMargin = true
 						lineY = lineY + settings.currentSpaceAfter
 						-- Reset the first line of paragraph flag
-						isFirstLine = true
+						settings.isFirstLine = true
 						elementCounter = 1
 					elseif (tag == "ul") then
 						setStyleFromTag (tag, attr)
@@ -3062,7 +3065,7 @@ print ("---")
 						stacks.list[stacks.list.ptr] = nil
 						stacks.list.ptr = stacks.list.ptr -1
 						-- Reset the first line of paragraph flag
-						isFirstLine = true
+						settings.isFirstLine = true
 						elementCounter = 1
 					elseif (tag == "#document") then
 						-- lines from non-HTML text will be tagged #document

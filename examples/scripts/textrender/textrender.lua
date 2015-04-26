@@ -192,9 +192,30 @@ local inline = {
 }
 --]]
 
+
+local block = {
+	address = true,
+	blockquote = true,
+	center = true,
+	dir = true, div = true, dl = true,
+	fieldset = true, form = true,
+	h1 = true, h2 = true, h3 = true, h4 = true, h5 = true, h6 = true, hr = true,
+	isindex = true,
+	-- Note, we treat <li> as a block, which is not standard HTML
+	li = true,
+	menu = true,
+	noframes = true,
+	ol = true,
+	p = true,
+	pre = true,
+	table = true,
+	ul = true,
+}
+
 --------------------------------------------------------
 -- Common functions redefined for speed
 --------------------------------------------------------
+
 
 --------------------------------------------------------
 -- Convert pt values to pixels, for font sizing.
@@ -1881,18 +1902,22 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 if (settings.elementOnFirstLine) then
 	print (" ************ ")
 end
-									if (settings.elementOnFirstLine) then
-										r:setStrokeColor( unpack (onFirstLineColor) )
-										r:setFillColor(unpack(onFirstLineColor))
-									elseif (settings.isFirstLine) then
-										r:setStrokeColor( unpack (firstLineColor) )
-										r:setFillColor(unpack(firstLineColor))
-									else
-										r:setStrokeColor( unpack (otherLinesColor) )
-										r:setFillColor(unpack(otherLinesColor))
-									end
 									
-									--r:setFillColor(unpack(testBkgdColor))
+									-- FALSE = show first line values, TRUE = show A or C render 
+									if (false) then
+										if (settings.elementOnFirstLine) then
+											r:setStrokeColor( unpack (onFirstLineColor) )
+											r:setFillColor(unpack(onFirstLineColor))
+										elseif (settings.isFirstLine) then
+											r:setStrokeColor( unpack (firstLineColor) )
+											r:setFillColor(unpack(firstLineColor))
+										else
+											r:setStrokeColor( unpack (otherLinesColor) )
+											r:setFillColor(unpack(otherLinesColor))
+										end
+									else
+										r:setFillColor(unpack(testBkgdColor))
+									end
 
 
 									r.isVisible = testing
@@ -2043,8 +2068,8 @@ end
 									local cachedItem = getCachedChunkItem(cachedChunk, cachedChunkIndex)
 									
 									-- Cached values
-									local isFirstLine = cachedItem.isFirstLine
-									local renderTextFromMargin = cachedItem.renderTextFromMargin
+									settings.isFirstLine = cachedItem.isFirstLine
+									settings.elementOnFirstLine = cachedItem.elementOnFirstLine
 
 									lineHeight = cachedItem.lineHeight
 									renderXMLvars.currentRenderedLineIndex = cachedItem.renderXMLvars.currentRenderedLineIndex
@@ -2300,6 +2325,7 @@ end
 
 																		renderTextFromMargin = renderTextFromMargin,
 																		isFirstLine = settings.isFirstLine,
+																		elementOnFirstLine = settings.elementOnFirstLine,
 
 																		currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex,
 																	})
@@ -2509,6 +2535,7 @@ end
 
 																		renderTextFromMargin = renderTextFromMargin,
 																		isFirstLine = settings.isFirstLine,
+																		elementOnFirstLine = settings.elementOnFirstLine,
 
 																		currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex,
 																	})
@@ -2687,6 +2714,8 @@ end
 
 													renderTextFromMargin = renderTextFromMargin,
 													isFirstLine = settings.isFirstLine,
+													elementOnFirstLine = settings.elementOnFirstLine,
+
 
 													currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex,
 												})
@@ -2748,11 +2777,13 @@ print ("2702 settings.isFirstLine, settings.elementOnFirstLine, lineY: ", settin
 					-- Handle formatting tags: p, div, br
 					-- This is the opening tag, so we add space before and stuff like that.
 					------------------------------------------------------------
-
+					
 					-- ================================================
 					-- Tags reset margins
 					-- ================================================
-					if (tag == "p" or tag == "div" or tag == "li" or tag == "ul" or tag == "ol") then
+					-- Note, we treat <li> as a block, which is not standard HTML
+					
+					if ( block[tag] ) then --tag == "p" or tag == "div" or tag == "li" or tag == "ul" or tag == "ol") then
 
 						-- Reset margins, cursor, etc. to defaults
 						settings.elementOnFirstLine = true
@@ -2981,9 +3012,11 @@ multiplier = 1
 
 							-- Text that has no wrapper, i.e. that isn't inside of <p> or <ol>, etc.,
 							-- will be tagged 'body' and should be treated like <p>
+							--[[
 							if  (element and element ~= " " and tag == "body") then
 								lineY = lineY + lineHeight + settings.currentSpaceAfter
 							end
+							--]]
 
 --print ("B-Tag",tag, element, currentXOffset)
 							local saveStyleSettings = getAllStyleSettings()
