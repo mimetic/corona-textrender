@@ -46,7 +46,7 @@ DEALINGS IN THE SOFTWARE.
 
 
 ]]
-
+--display.setDrawMode( "wireframe", false )
 -- TESTING
 local testing = false
 
@@ -407,14 +407,14 @@ local function fitBlockToHeight(textblock, options )
 
 	local h = funx.percentOfScreenHeight(maxheight)
 	if (not h) then
-		h = screenH - tt - tb
+		h = screenH
 	end
 	-- width and height must be a multiple of four
 	h = ceil( h/4 ) * 4
 
 	local w = funx.percentOfScreenWidth(textblock.width)
 	if (not w) then
-		w = screenW - tl - tr
+		w = screenW
 	end
 	-- width and height must be a multiple of four
 	w = ceil( w/4 ) * 4
@@ -923,6 +923,9 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 	-- ====================
 	-- FIXED VALUES
 	-- These should probably be changeable somewhere!
+	
+	-- Used to track x location while creating a line of text
+	settings.currentXOffset = 0
 	
 	-- Indent value in OL and UL lists
 	settings.listIndent = 10
@@ -1442,7 +1445,9 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 			if (format['text-indent']) then settings.firstLineIndent = convertValuesToPixels(format['text-indent'], settings.size, settings.deviceMetrics) end
 
 			-- Left Indent
-			if (format['margin-left']) then settings.leftIndent = convertValuesToPixels(format['margin-left'], settings.size, settings.deviceMetrics) end
+			if (format['margin-left']) then 
+				settings.leftIndent = convertValuesToPixels(format['margin-left'], settings.size, settings.deviceMetrics) 
+			end
 
 			-- Right Indent
 			if (format['margin-right']) then settings.rightIndent = convertValuesToPixels(format['margin-right'], settings.size, settings.deviceMetrics) end
@@ -1852,7 +1857,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 					tag = lower(tostring(tag))
 
 					-- Init stacks
-					stacks = stacks or { list = { ptr = 1 } }
+					stacks = stacks or { list = { ptr = 0 } }
 
 
 					------------------------------------------------------------
@@ -1886,9 +1891,9 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 								if (testing) then
 
 									testBkgdColor = testBkgdColor or {1,1,0.5,0.2}
-									firstLineColor = firstLineColor or {1,0,0, 0.2}
-									onFirstLineColor = firstLineColor or {0,1,0, 0.2}
-									otherLinesColor = otherLinesColor or {0, 0, 1, 0.2}
+									local firstLineColor =  {1,0,0, 0.2}
+									local onFirstLineColor = firstLineColor or {0,1,0, 0.2}
+									local otherLinesColor = {0, 0, 1, 0.2}
 
 									-- when drawing the box, we compensate for the stroke, thus -2
 									local r = display.newRect(newDisplayLineGroup, 0, 0, newDisplayLineText.width-2, newDisplayLineText.height-2)
@@ -1896,11 +1901,6 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 									anchor(r, "BottomLeft")
 									r.x = newDisplayLineText.x+1
 									r.y = newDisplayLineText.y+1
-									
-									--if (settings.isFirstLine) then
-if (settings.elementOnFirstLine) then
-	print (" ************ ")
-end
 									
 									-- FALSE = show first line values, TRUE = show A or C render 
 									if (false) then
@@ -2665,6 +2665,10 @@ end
 									local newDisplayLineGroup = display.newGroup()
 								
 									currentLine = setCase(settings.case, currentLine)
+if (testing) then
+	print ("renderParsedElement: (C) : Substitutions in current line with 'settings' table values.")
+	currentLine = funx.substitutions (currentLine, settings)
+end
 									
 									local newDisplayLineText = display.newText({
 										parent = newDisplayLineGroup,
@@ -2780,17 +2784,25 @@ end
 					-- ================================================
 					-- Tags reset margins
 					-- ================================================
-					-- Note, we treat <li> as a block, which is not standard HTML
+					-- Note, we treat <li> as a block, which is not standard HTML!
 					
 					if ( block[tag] ) then --tag == "p" or tag == "div" or tag == "li" or tag == "ul" or tag == "ol") then
+
+
+						if ( settings.currentXOffset > 0 ) then
+							lineY = lineY + lineHeight
+						lineY = lineY + settings.currentSpaceBefore
+						end
 
 						-- Reset margins, cursor, etc. to defaults
 						settings.elementOnFirstLine = true
 						renderTextFromMargin = true
 						settings.currentXOffset = 0
-						x = 0
+						settings.currentLeftIndent = 0
+						settings.currentFirstLineIndent = 0
 						settings.leftIndent = 0
 						settings.rightIndent = 0
+						x = 0
 						
 						-- Apply style based on tag, e.g. <ol> or <p>
 						if (textstyles and textstyles[tag] ) then
@@ -2812,12 +2824,8 @@ end
 
 						settings.currentSpaceBefore = settings.spaceBefore
 						settings.currentSpaceAfter = settings.spaceAfter
-
-						-- Opening <p> makes us jump down one line.
-						if (renderTextFromMargin) then
-							lineY = lineY + lineHeight + settings.currentSpaceBefore
-						end
 						
+						lineY = lineY + settings.currentSpaceBefore
 
 						if (tag == "ol" or tag == "ul" ) then
 						-- ================================================
@@ -2880,61 +2888,55 @@ end
 							else
 								tempvar.t = stacks.list[stacks.list.ptr].bullet or ""
 							end
-
-							-- add a space after the bullet
-							tempvar.t = tempvar.t .. " "
+							
+							if ( stacks.list[stacks.list.ptr].indent > 0 ) then
+								settings.leftIndent = settings.leftIndent  + stacks.list[stacks.list.ptr].indent
+							end
 
 							tempvar.bullet = renderParsedElement(1, tempvar.t, "", "")
 
+							-- get x ptr before adding the bullet
+							local xptr = x
+							
 							-- Add one to the element counter so the next thing won't be on a new line
 							elementCounter = elementCounter + 1
 							
-							-- get x ptr before adding the bullet
-							local xptr = x
 							-- Render the bullet and add to line
-							addToCurrentRenderedLine(tempvar.bullet, x, lineY, textAlignment, settings, tempvar.t)
+							--addToCurrentRenderedLine(tempvar.bullet, x, lineY, textAlignment, settings, tempvar.t)
 							
 							-- Use 'padding' to set space after bullet. Crude but close to HTML
-							local spaceAfterBullet = tonumber(stacks.list[stacks.list.ptr].padding)
-
-							-- ---
-							-- The default style sheet should send indent on "li" to make it hanging
-							-- The default here is all flush left.
-							
-							-- How much space did the bullet take?
-							local bulletWidth = settings.currentXOffset - xptr
-
-							if (spaceAfterBullet == nil) then
-								spaceAfterBullet = settings.leftIndent - bulletWidth
+							local spaceAfterBullet
+							if (attr.padding) then
+								spaceAfterBullet = convertValuesToPixels(attr.padding)
+							elseif (stacks.list[stacks.list.ptr].padding) then
+								spaceAfterBullet = tonumber(stacks.list[stacks.list.ptr].padding)
+							else
+								-- note: settings.listExtraSpaceAfterBullet is a constant, set at beginning
+								spaceAfterBullet = max(settings.size * 3 - (settings.currentXOffset - xptr), settings.listExtraSpaceAfterBullet,0)
 							end
-							if (spaceAfterBullet == nil) then
-							-- Move text to a 3em from the bullet, adjusting
-							-- for the bullet's width
-								spaceAfterBullet = max(settings.size * 3 - bulletWidth, settings.listExtraSpaceAfterBullet)
-							elseif (spaceAfterBullet < 0) then
-								spaceAfterBullet = 0
-							end
+
+--							if (spaceAfterBullet < 0) then
+--								spaceAfterBullet = 0
+--							end
 
 							-- Create space after the bullet on the first line of text
 							settings.currentXOffset = settings.currentXOffset  + spaceAfterBullet
-							
 						elseif (tag == "hr") then
 						-- ================================================
 						-- HR tag
 						-- ================================================
 							-- Reset to Normal
 							setStyleFromCommandLine (textstyles.normal)
-
-							renderTextFromMargin = true
-							settings.currentXOffset = 0
 							
 							tempvar.hrLineSize = attr.size or (convertValuesToPixels(attr.height) or 1)
 							tempvar.width = applyPercent(attr.width, width) or width
 							tempvar.width = tempvar.width
-							tempvar.line = display.newRect(0, 0, tempvar.width, tempvar.hrLineSize)
-							tempvar.line:setFillColor(0,0,0,1)
-							-- Render the bullet and add to line
-							addToCurrentRenderedLine(tempvar.line, x, lineY, "Center", settings, "---")
+							
+							local hr = display.newRect(0, 0, tempvar.width, tempvar.hrLineSize)
+							funx.anchor(hr, "BottomLeft")
+							hr:setFillColor(0,0,0,1)
+
+							addToCurrentRenderedLine(hr, x, lineY, "Center", settings, "---")
 
 							lineY = lineY + lineHeight + settings.currentSpaceAfter
 
@@ -2946,6 +2948,8 @@ end
 					elseif (tag == "br") then
 						renderTextFromMargin = true
 						settings.currentXOffset = 0
+						settings.currentLeftIndent = 0
+						settings.currentFirstLineIndent = 0
 						lineY = lineY + lineHeight + settings.currentSpaceAfter
 						x = 0
 
@@ -3045,11 +3049,8 @@ end
 						renderXMLvars.currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex + 1
 						setStyleFromTag (tag, attr)
 						renderTextFromMargin = true
-						lineY = lineY + settings.currentSpaceAfter
-						--lineY = lineY + currentLineHeight + settings.currentSpaceAfter
-
-						-- Reset the first line of paragraph flag
 						settings.isFirstLine = true
+						lineY = lineY + settings.currentSpaceAfter
 						elementCounter = 1
 					elseif (tag == "br" or tag == "hr" or tag == "img") then
 						renderXMLvars.currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex + 1
@@ -3067,20 +3068,22 @@ end
 						settings.isFirstLine = true
 						elementCounter = 1
 					elseif (tag == "ul") then
-						setStyleFromTag (tag, attr)
 						renderXMLvars.currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex + 1
+						setStyleFromTag (tag, attr)
 						renderTextFromMargin = true
+						settings.currentXOffset = 0
+						settings.isFirstLine = true
 						stacks.list[stacks.list.ptr] = nil
 						stacks.list.ptr = stacks.list.ptr -1
 						elementCounter = 1
 					elseif (tag == "ol") then
-						setStyleFromTag (tag, attr)
 						renderXMLvars.currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex + 1
+						setStyleFromTag (tag, attr)
 						renderTextFromMargin = true
+						settings.currentXOffset = 0
+						settings.isFirstLine = true
 						stacks.list[stacks.list.ptr] = nil
 						stacks.list.ptr = stacks.list.ptr -1
-						-- Reset the first line of paragraph flag
-						settings.isFirstLine = true
 						elementCounter = 1
 					elseif (tag == "#document") then
 						-- lines from non-HTML text will be tagged #document

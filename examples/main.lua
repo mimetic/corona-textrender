@@ -1,4 +1,4 @@
---====================================================================--
+require "CiderDebugger";--====================================================================--
 -- TextRender example
 --
 -- Shows use of the textrender widget
@@ -101,10 +101,11 @@ bkgd:setStrokeColor(.2, .2, .2, 1)
 -- Build a scrolling text field.
 --===================================================================--
 
-local x,y = 50,50
+local x,y = 20,100
 local width, height = display.contentWidth * .8, display.contentHeight * .8
 
 
+--===================================================================--
 -- Background Rectangle
 local strokeWidth = 1
 local padding = 0
@@ -187,3 +188,33 @@ local yAdjustment = textblock.yAdjustment
 scrollblock.x = x
 scrollblock.y = y
 
+
+--===================================================================--
+-- Testing buttons
+
+local buttonX = screenW - 120
+local buttonY = 60
+
+
+local wf = false
+local function toggleWireframe()
+	wf = not wf
+	display.setDrawMode( "wireframe", wf )
+	if (not wf) then
+		display.setDrawMode( "forceRender" )
+	end
+	print ("WF = ",wf)
+end
+
+local widget = require ("widget")
+local wfb = widget.newButton{
+			label = "Wireframe",
+			labelColor = { default={ 0,0,0 }, over={ 1, 0, 0, 0.5 } },
+			fontSize = 20,
+			x =buttonX,
+			y=buttonY,
+			shape = "roundedRect",
+			fillColor = { default={ .7,.7,.7 }, over={ .2, .2, .2 } },
+			onRelease = toggleWireframe,
+		}
+wfb:toFront()

@@ -19,11 +19,12 @@ H5=,16,26,0,0,0,,100%,NORMAL,left,8,0,0,0,0
 Quote = Avenir-Light,20,28,200,255,20,,100%
 
 # Default settings for hanging text in lists
-li = ,,,,,,,,, left,0,0,-30,30,0
+li = ,12,,,,,,,, left,0,0,0,0,0
+ol = ,,,,,,,,, left,0,0,0,0,0
 
 
 # testing styles
-LeftIndent = Baskerville,16,24, 0,0,0,,100%, NORMAL, left,0,10,50,0,0
+LeftIndent = Baskerville,16,24, 0,0,0,,100%, NORMAL, left,0,10,30,0,0
 Left = 		Baskerville,16,24, 0,0,0,,100%, NORMAL,left,0,10,0,0,0
 Right = 	Baskerville,16,24, 0,0,0,,100%, NORMAL,right,0,10,0,0,0
 Center = 	Baskerville,16,24, 0,0,0,,100%, NORMAL,center,0,10,0,0,0

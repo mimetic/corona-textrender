@@ -132,7 +132,10 @@ end
 
 
 -- Add an invisible positioning rectangle for a group
-local function addPosRect(g, vis, c)
+-- @param g [group] Group into which we add a position rect at 0,0
+-- @param vis [boolean] True = visible, False = hidden
+-- @param c [table]	RGBa color table {r,g,b,a}
+local function addPosRect(g, vis, c )
 	local r = display.newRect(g, 0,0,10,10)
 	r.isVisible = vis
 	c = c or {250,0,0,100}
