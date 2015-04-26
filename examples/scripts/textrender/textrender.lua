@@ -105,6 +105,7 @@ local setCase = funx.setCase
 local fixCapsForReferencePoint = funx.fixCapsForReferencePoint
 local isPercent = funx.isPercent
 local loadImageFile = funx.loadImageFile
+local applyPercent = funx.applyPercent
 
 -- Set the width/height of screen. Might have changed from when module loaded due to orientation change
 local screenW, screenH = display.contentWidth, display.contentHeight
@@ -191,15 +192,14 @@ local inline = {
 	var = true,
 }
 --]]
-
-
 local block = {
 	address = true,
 	blockquote = true,
 	center = true,
 	dir = true, div = true, dl = true,
 	fieldset = true, form = true,
-	h1 = true, h2 = true, h3 = true, h4 = true, h5 = true, h6 = true, hr = true,
+	h1 = true, h2 = true, h3 = true, h4 = true, h5 = true, h6 = true, 
+	hr = true,
 	isindex = true,
 	-- Note, we treat <li> as a block, which is not standard HTML
 	li = true,
@@ -1127,7 +1127,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 	settings.size = tonumber(size) or 12
 	settings.color = color or {0,0,0,255}
 	settings.width = width
-	settings.opacity = funx.applyPercent(opacity, OPAQUE) or OPAQUE
+	settings.opacity = applyPercent(opacity, OPAQUE) or OPAQUE
 	settings.targetDeviceScreenSize = targetDeviceScreenSize or screenW..","..screenH
 	settings.case = "none"
 	settings.decoration = "none"
@@ -1142,7 +1142,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 	settings.maxHeight = tonumber(maxHeight) or 0
 	settings.yOffset = 0	-- used for ascenders/descenders, superscript, subscript
 
- 	lineHeight = funx.applyPercent(lineHeight, settings.size) or floor(settings.size * 1.3)
+ 	lineHeight = applyPercent(lineHeight, settings.size) or floor(settings.size * 1.3)
 
 	-- Scaling for device
 	-- Scale the text proportionally
@@ -1283,7 +1283,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 			if ((params[5] and params[5] ~= "") and (params[6] and params[6] ~= "") and (params[7] and params[7] ~= "")) then
 				-- Handle opacity as RGBa or HDRa, not by itself
 				if (params[9] and params[9] ~= "") then
-					settings.color = {tonumber(params[5]), tonumber(params[6]), tonumber(params[7]), funx.applyPercent(params[9], OPAQUE) }
+					settings.color = {tonumber(params[5]), tonumber(params[6]), tonumber(params[7]), applyPercent(params[9], OPAQUE) }
 				else
 					settings.color = {tonumber(params[5]), tonumber(params[6]), tonumber(params[7]), OPAQUE }
 				end
@@ -1298,7 +1298,6 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 				settings.minLineCharCount = minCharCount or 5
 			end
 			-- opacity (Now always 100%)
-			--if (params[9] and params[9] ~= "") then settings.opacity = funx.applyPercent(params[9], OPAQUE) end
 			settings.opacity = 1.0
 			-- case (upper/normal)
 			if (params[10] and params[10] ~= "") then settings.case = lower(trim(params[10])) end
@@ -1363,11 +1362,11 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 			-- Scale the font
 			-- If value is a percentage, apply it
 			if (format['yOffset']) then
-				settings.yOffset = settings.yOffset + funx.applyPercent ( format.yOffset, settings.size, false)
+				settings.yOffset = settings.yOffset + applyPercent ( format.yOffset, settings.size, false)
 			end
 
 			if (format['scale']) then
-				settings.size = funx.applyPercent ( format.scale, settings.size, false)
+				settings.size = applyPercent ( format.scale, settings.size, false)
 			end
 			
 			-- font size
@@ -1417,7 +1416,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 
 			-- opacity
 			-- Now built into the color, e.g. RGBa color
-			--if (format.opacity) then settings.opacity = funx.applyPercent(format.opacity, OPAQUE) end
+			--if (format.opacity) then settings.opacity = applyPercent(format.opacity, OPAQUE) end
 
 			-- case (upper/normal) using *legacy* coding ("case")
 			if (format.case) then
@@ -2742,7 +2741,7 @@ end
 
 									createLinkingBox(newDisplayLineGroup, newDisplayLineText, currentLine, {1,0,0,0.3})
 
-print ("2702 settings.isFirstLine, settings.elementOnFirstLine, lineY: ", settings.isFirstLine, settings.elementOnFirstLine, lineY, "C: Final line: ["..currentLine.."]")
+--print ("2702 settings.isFirstLine, settings.elementOnFirstLine, lineY: ", settings.isFirstLine, settings.elementOnFirstLine, lineY, "C: Final line: ["..currentLine.."]")
 
 									settings.isFirstLine = false
 									renderTextFromMargin = false
@@ -2804,8 +2803,7 @@ print ("2702 settings.isFirstLine, settings.elementOnFirstLine, lineY: ", settin
 						if (attr.class) then
 							styleName = lower(attr.class)
 							if (textstyles and textstyles[styleName] ) then
-								local params = textstyles[styleName]
-								setStyleFromCommandLine (params)
+								setStyleFromCommandLine ( textstyles[styleName] )
 							else
 								print ("WARNING: funx.autoWrappedText tried to use a missing text style ("..styleName..")")
 							end
@@ -2821,31 +2819,13 @@ print ("2702 settings.isFirstLine, settings.elementOnFirstLine, lineY: ", settin
 						end
 						
 
-						-- ================================================
-						-- LISTS
 						if (tag == "ol" or tag == "ul" ) then
+						-- ================================================
+						-- LISTS: OL/UL
+						-- ================================================
 							-- Nested lists require left indentation
 							-- Left indent starting at 2nd level
-							local indent = 0
-							local multiplier = stacks.list.ptr - 1
 
--- Default (if no style set) is a hanging indent for a list
---settings.firstLineIndent = -30
---settings.leftIndent = 30
-
-
-multiplier = 1
-							
-							-- 2nd level?
-							if (true or stacks.list[stacks.list.ptr] and
-								stacks.list[stacks.list.ptr].tag) then
-								lineY = lineY + lineHeight + settings.currentSpaceAfter
-								indent = settings.listIndent
-							end
-							--settings.currentLeftIndent = settings.leftIndent + multiplier * indent
-							--settings.currentFirstLineIndent = settings.leftIndent + multiplier * indent
-							
-							--settings.currentXOffset = settings.listIndent
 							stacks.list.ptr =  stacks.list.ptr + 1
 							local b = ""
 							if (tag == "ul") then
@@ -2873,15 +2853,18 @@ multiplier = 1
 							stacks.list[stacks.list.ptr] = { tag = tag, 
 										line = 1, 
 										bullet = b, 
-										indent = indent, 
+										indent = settings.listIndent * (stacks.list.ptr - 1), 
 										leftIndent = settings.leftIndent or 0, 
 										rightIndent = settings.rightIndent or 0,
 										padding = convertValuesToPixels(attr.padding),
 										}
 
-						-- LIST ITEMS: add a bullet or number
 						elseif  (tag == "li") then
-							
+						-- ================================================
+						-- LI tag
+						-- LIST ITEMS: add a bullet or number
+						-- ================================================
+														
 							-- Apply a 'value' attribute <li value="10" ...
 							if (attr.value) then
 								stacks.list[stacks.list.ptr].line = tonumber(attr.value)
@@ -2935,6 +2918,26 @@ multiplier = 1
 							-- Create space after the bullet on the first line of text
 							settings.currentXOffset = settings.currentXOffset  + spaceAfterBullet
 							
+						elseif (tag == "hr") then
+						-- ================================================
+						-- HR tag
+						-- ================================================
+							-- Reset to Normal
+							setStyleFromCommandLine (textstyles.normal)
+
+							renderTextFromMargin = true
+							settings.currentXOffset = 0
+							
+							tempvar.hrLineSize = attr.size or (convertValuesToPixels(attr.height) or 1)
+							tempvar.width = applyPercent(attr.width, width) or width
+							tempvar.width = tempvar.width
+							tempvar.line = display.newRect(0, 0, tempvar.width, tempvar.hrLineSize)
+							tempvar.line:setFillColor(0,0,0,1)
+							-- Render the bullet and add to line
+							addToCurrentRenderedLine(tempvar.line, x, lineY, "Center", settings, "---")
+
+							lineY = lineY + lineHeight + settings.currentSpaceAfter
+
 						end
 
 					-- ================================================
@@ -2945,6 +2948,7 @@ multiplier = 1
 						settings.currentXOffset = 0
 						lineY = lineY + lineHeight + settings.currentSpaceAfter
 						x = 0
+
 
 					-- ================================================
 					-- Tags that do not reset margins
@@ -2974,7 +2978,7 @@ multiplier = 1
 								local image = funx.loadImageFile( attr.src, nil, system[attr.directory] )
 								anchor(image, "TopLeft")
 								if ( attr.width or attr.height) then
-									funx.ScaleObjToSize (image, funx.applyPercent(attr.width, width), attr.height)
+									funx.ScaleObjToSize (image, applyPercent(attr.width, width), attr.height)
 								end
 								lineY = lineY + image.contentHeight - lineHeight
 								addToCurrentRenderedLine(image, x, lineY, textAlignment, settings, attr.src)
@@ -2989,7 +2993,6 @@ multiplier = 1
 
 					for n, element in ipairs(parsedText) do
 
-						--local styleSettings = {}
 						if (type(element) == "table") then
 --print ("A-Tag",tag)
 							local saveStyleSettings = getAllStyleSettings()
@@ -3048,14 +3051,7 @@ multiplier = 1
 						-- Reset the first line of paragraph flag
 						settings.isFirstLine = true
 						elementCounter = 1
-					elseif (tag == "br") then
-						renderXMLvars.currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex + 1
-						setStyleFromTag (tag, attr)
-						renderTextFromMargin = true
-						settings.currentXOffset = 0
-						settings.isFirstLine = true
-						--elementCounter = 1
-					elseif (tag == "img") then
+					elseif (tag == "br" or tag == "hr" or tag == "img") then
 						renderXMLvars.currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex + 1
 						setStyleFromTag (tag, attr)
 						renderTextFromMargin = true
@@ -3074,8 +3070,6 @@ multiplier = 1
 						setStyleFromTag (tag, attr)
 						renderXMLvars.currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex + 1
 						renderTextFromMargin = true
-						--lineY = lineY + lineHeight + settings.currentSpaceAfter
-						--leftIndent = settings.leftIndent - stacks.list[stacks.list.ptr].indent
 						stacks.list[stacks.list.ptr] = nil
 						stacks.list.ptr = stacks.list.ptr -1
 						elementCounter = 1
@@ -3083,8 +3077,6 @@ multiplier = 1
 						setStyleFromTag (tag, attr)
 						renderXMLvars.currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex + 1
 						renderTextFromMargin = true
-						--lineY = lineY + lineHeight + settings.currentSpaceAfter
-						--leftIndent = settings.leftIndent - stacks.list[stacks.list.ptr].indent
 						stacks.list[stacks.list.ptr] = nil
 						stacks.list.ptr = stacks.list.ptr -1
 						-- Reset the first line of paragraph flag
@@ -3101,8 +3093,7 @@ multiplier = 1
 --						elementCounter = 1
 					end
 
-					--print ("Restore style settings", settings.color[1], tag)
-					-- Restore style settings to what they were before
+					-- Now, overwrite Normal by restoring the style settings to what they were before
 					-- entering the tag
 
 					setStyleSettings(styleSettings)

@@ -59,21 +59,23 @@ style = font, size, leading, R,G,B, width, opacity, NORMAL|ALL_CAPS, text alignm
 </head>
 <body>
 <p class="Title">TextRender Example</p>
-
+<hr style="height:6px;">
 
 <p style="font-size:16px;">
 	<i>This is a sample HTML file for corona-textrender.</i>
 </p>
 
-<br>
+<hr style="width:50%;height:3;">
 <br>
 <i>This text does not have &lt;p&gt;&lt;/p&gt; wrapped around it.</i><br>
 One of the most fantastic and most distinguishing features of this species <b>is the bold dark-bars</b> draped across the dorsal surface. Additional dark spots are found along the lateral surfaces of the species.
 <br>
+<hr style="width:75%;height:1;">
 
 <p class="LeftIndent" >
 One of the most fantastic and <i>most distinguishing features</i> of this species <span style="color:rgb(1, .5, .2);">is the bold dark-bars</span> draped across the dorsal surface. Additional dark spots are found along the lateral surfaces of the species.
 </p>
+<hr>
 
 <p class="Title">Unordered List:</p>
 <ul bullet="•">
@@ -82,21 +84,25 @@ One of the most fantastic and <i>most distinguishing features</i> of this specie
 	<li>Item 3</li>
 </ul>
 
+<hr>
 
 <p class="Title">Ordered List:</p>
 <ol style="">
 	<li>One of the most fantastic and <i>most distinguishing features</i> of this species <span style="color:rgb(1, .5, .2);">is the bold dark-bars</span> draped across the dorsal surface. Additional dark spots are found along the lateral surfaces of the species.</li>
-	<li>Sub-List:
-	</li>
-	<li>Item 3</li>
-	<li value="10">This item is #10 by setting the 'value' attribute</li>
 	<li>Another item</li>
+	<li value="10">This item is #10 by setting the 'value' attribute</li>
+	<li>A sub-list
+		<ol >
+			<li style="margin-left:50px;">sub-item 1</li>
+			<li style="margin-left:50px;">sub-item 2</li>
+			<li style="margin-left:50px;">sub-item 3</li>
+			<li style="margin-left:50px;">sub-item 4</li>
+			<li style="margin-left:50px;">sub-item 5</li>
+		</ol>
+	</li>
 </ol>
 
-		<ol>
-			<li>sub-item 1</li>
-			<li>sub-item 2</li>
-		</ol>
+<hr>
 
 <p class="LeftIndent">
 	<b>Left-Indent Style:</b> One of the most fantastic and <i>most distinguishing features</i> of this species <span style="color:rgb(1, .5, .2);">is the bold dark-bars</span> draped across the dorsal surface. Additional dark spots are found along the lateral surfaces of the species.
