@@ -78,13 +78,6 @@ funx.mkdir (cacheDir, "",false, system.CachesDirectory)
 
 local navbarHeight = 50
 
-
---===================================================================--
--- Clear text caches for TESTING only! Otherwise, you might change something
--- and see only the cached text, and not see the changes you made in your code.
-textrender.clearAllCaches(cacheDir)
-
-
 --===================================================================--
 -- Page background
 --===================================================================--
@@ -130,7 +123,6 @@ local params = {
 	useHTMLSpacing = true,
 	
 	textstyles = textStyles,
-	cacheToDB = true,	-- true is default, for fast caches using sql database
 
 	-- Not needed, but defaults
 	font = "AvenirNext-Regular",
@@ -151,8 +143,8 @@ local params = {
 	
 	-- cacheDir is empty so we do not use caching with files, instead we use the SQLite database
 	-- which is faster.
-	cacheDir = "",
-	cacheToDB = true,
+	cacheDir = nil,
+	cacheToDB = true,	-- true is default, for fast caches using sql database
 }
 
 local textblock = textrender.autoWrappedText(params)
@@ -182,12 +174,55 @@ local options = {
 
 }
 
-local scrollblock = textblock:fitBlockToHeight( options )
-
+local textblock = textblock:fitBlockToHeight( options )
 local yAdjustment = textblock.yAdjustment
-scrollblock.x = x
-scrollblock.y = y
+textblock.x = x
+textblock.y = y
 
+
+-- Remove for testing below, but now it is cached
+textblock:removeSelf()
+
+local startTime = system.getTimer()
+local doCache = true
+local n = 10
+print ("Repeat textrender for "..n.." times.")
+if (doCache) then
+	print ("( using Caching )")
+end
+
+for i = 1, n do
+
+	print ("textrender #"..i )
+
+	-- Build
+	params.cacheToDB = doCache
+	textblock = textrender.autoWrappedText(params)
+
+	local textblock = textblock:fitBlockToHeight( options )
+	local yAdjustment = textblock.yAdjustment
+	textblock.x = x
+	textblock.y = y
+
+	-- Remove
+	textblock:removeSelf()
+	
+	if (not doCache) then
+		print ("Clear caches.")
+		textrender.clearAllCaches(cacheDir)
+	end
+
+end
+local totalTime = math.floor((system.getTimer() - startTime) * 100) / 100
+print ("Time for "..n.." repetitions: ".. totalTime  .. " milliseconds, average speed is " .. totalTime/n .. " milliseconds")
+
+
+textblock = textrender.autoWrappedText(params)
+
+local textblock = textblock:fitBlockToHeight( options )
+local yAdjustment = textblock.yAdjustment
+textblock.x = x
+textblock.y = y
 
 --===================================================================--
 -- Testing buttons

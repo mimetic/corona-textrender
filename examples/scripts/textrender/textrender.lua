@@ -53,7 +53,7 @@ local testing = false
 -- Don't use the line-wrap cache
 local noCache = false
 if (noCache) then
-	print ("TEXTWRAP: CACHING TURNED OFF!")
+	print ("**** WARNING: TEXTWRAP: CACHING TURNED OFF FOR TESTING!!!! ****")
 end
 
 -- Main var for this module
@@ -693,7 +693,7 @@ local function loadTextWrapFromCache(id, cacheDir)
 			local c = { wrapCache = json.decode(row.cache), baselineCache = json.decode(row.baseline), }
 			return c
 		else
---print ("NOT CACHED: ID",id)
+--print ("*** NOT CACHED: ID",id)
 			return false
 		end
 	else
@@ -1025,6 +1025,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 	if (noCache) then
 		cacheDir = nil
 		T.cacheToDB = false
+		print ("WARNING: caching turned off for testing.")
 	end
 		
 	-- Default is to cache using the sqlite3 database.
@@ -2075,7 +2076,6 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 								if (testing) then
 									print ("********** Rendering from cache.")
 								end
-
 								for cachedChunkIndex, text in pairs(cachedChunk.text) do
 
 									local cachedItem = getCachedChunkItem(cachedChunk, cachedChunkIndex)
@@ -2085,7 +2085,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 									settings.elementOnFirstLine = cachedItem.elementOnFirstLine
 
 									lineHeight = cachedItem.lineHeight
-									renderXMLvars.currentRenderedLineIndex = cachedItem.renderXMLvars.currentRenderedLineIndex
+									renderXMLvars.currentRenderedLineIndex = cachedItem.currentRenderedLineIndex
 									lineY = cachedItem.lineY
 									x = cachedItem.x
 									textAlignment = cachedItem.textAlignment

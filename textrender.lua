@@ -53,7 +53,7 @@ local testing = false
 -- Don't use the line-wrap cache
 local noCache = false
 if (noCache) then
-	print ("TEXTWRAP: CACHING TURNED OFF!")
+	print ("**** WARNING: TEXTWRAP: CACHING TURNED OFF FOR TESTING!!!! ****")
 end
 
 -- Main var for this module
@@ -308,7 +308,6 @@ local function getTagFormatting(fontFaces, tag, currentfont, variation, attr)
 			format.fontvariation = "BoldItalic"
 		else
 			format.font = getFontFace (basefont, "-Bold")
-print ("BASEFONT", basefont, format.font)
 			format.fontvariation = "Bold"
 		end
 	elseif (tag == "font" and attr) then
@@ -694,7 +693,7 @@ local function loadTextWrapFromCache(id, cacheDir)
 			local c = { wrapCache = json.decode(row.cache), baselineCache = json.decode(row.baseline), }
 			return c
 		else
---print ("NOT CACHED: ID",id)
+--print ("*** NOT CACHED: ID",id)
 			return false
 		end
 	else
@@ -1026,6 +1025,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 	if (noCache) then
 		cacheDir = nil
 		T.cacheToDB = false
+		print ("WARNING: caching turned off for testing.")
 	end
 		
 	-- Default is to cache using the sqlite3 database.
@@ -1279,6 +1279,11 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 		-- set style from params in a ### set, ... command line in the text
 		-- This depends on the closure for variables, such as font, size, etc.
 		local function setStyleFromCommandLine (params)
+		
+			if (not params) then
+				return
+			end
+		
 			-- font
 			if (params[2] and params[2] ~= "") then settings.font = trim(params[2]) end
 			-- font size
@@ -1485,10 +1490,19 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 
 			end
 
-			-- list bullet
-			if (format['bullet']) then
-				settings.bullet = format['bullet'] or "&#9679;"
+			-- List bullet
+			-- Default to disc
+
+			-- bullet set to nothing!
+			if ( format['bullet'] == "" ) then
+				settings.bullet = nil
+			elseif ( format['bullet'] == nil ) then
+			-- bullet not set, use default
+				settings.bullet = "&#9679;"
+			else
+				settings.bullet = format['bullet']
 			end
+
 			
 			
 			------------------------------------------------
@@ -2062,7 +2076,6 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 								if (testing) then
 									print ("********** Rendering from cache.")
 								end
-
 								for cachedChunkIndex, text in pairs(cachedChunk.text) do
 
 									local cachedItem = getCachedChunkItem(cachedChunk, cachedChunkIndex)
@@ -2072,7 +2085,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 									settings.elementOnFirstLine = cachedItem.elementOnFirstLine
 
 									lineHeight = cachedItem.lineHeight
-									renderXMLvars.currentRenderedLineIndex = cachedItem.renderXMLvars.currentRenderedLineIndex
+									renderXMLvars.currentRenderedLineIndex = cachedItem.currentRenderedLineIndex
 									lineY = cachedItem.lineY
 									x = cachedItem.x
 									textAlignment = cachedItem.textAlignment
@@ -2858,7 +2871,7 @@ end
 									b = "&#8212;"
 								elseif (attr.bullet == "none") then
 									b = ""
-								elseif (attr.bullet == "") then
+								elseif (attr.bullet == nil) then
 									b = "&#9679;"
 								elseif (attr.bullet ~= "") then
 									b = attr.bullet
@@ -2891,40 +2904,40 @@ end
 
 							stacks.list[stacks.list.ptr] = stacks.list[stacks.list.ptr] or {}
 							-- default for list is a disk.
-							tempvar.t = ""
+							tempvar.bulletText = ""
 							-- If number, use the number instead
 							if (stacks.list[stacks.list.ptr].tag == "ol" ) then
-								tempvar.t = stacks.list[stacks.list.ptr].line .. ". " or ""
+								tempvar.bulletText = stacks.list[stacks.list.ptr].line .. ". " or ""
 								stacks.list[stacks.list.ptr].line = stacks.list[stacks.list.ptr].line + 1
 							else
-								tempvar.t = stacks.list[stacks.list.ptr].bullet or ""
+								tempvar.bulletText = stacks.list[stacks.list.ptr].bullet or ""
 							end
 						
 							if ( stacks.list[stacks.list.ptr].indent > 0 ) then
 								settings.leftIndent = settings.leftIndent  + stacks.list[stacks.list.ptr].indent
 							end
+							
+							if (tempvar.bulletText) then
+								-- get x ptr before adding the bullet
+								local xptr = settings.currentXOffset
+								tempvar.bullet = renderParsedElement(1, tempvar.bulletText, "", "")
+								local bw = settings.currentXOffset - xptr
 
-							tempvar.bullet = renderParsedElement(1, tempvar.t, "", "")
+								-- Use 'padding' to set space after bullet. Crude but close to HTML
+								local spaceAfterBullet
+								if (attr.padding) then
+									spaceAfterBullet = convertValuesToPixels(attr.padding)
+								elseif (stacks.list[stacks.list.ptr].padding) then
+									spaceAfterBullet = tonumber(stacks.list[stacks.list.ptr].padding)
+								else
+									-- note: settings.listExtraSpaceAfterBullet is a constant, set at beginning
+									spaceAfterBullet = max(settings.size * 3 - (settings.currentXOffset - xptr), settings.listExtraSpaceAfterBullet,0)
+								end
 
-							-- get x ptr before adding the bullet
-							local xptr = x
-						
-							-- Render the bullet and add to line
-							--addToCurrentRenderedLine(tempvar.bullet, x, lineY, textAlignment, settings, tempvar.t)
-						
-							-- Use 'padding' to set space after bullet. Crude but close to HTML
-							local spaceAfterBullet
-							if (attr.padding) then
-								spaceAfterBullet = convertValuesToPixels(attr.padding)
-							elseif (stacks.list[stacks.list.ptr].padding) then
-								spaceAfterBullet = tonumber(stacks.list[stacks.list.ptr].padding)
-							else
-								-- note: settings.listExtraSpaceAfterBullet is a constant, set at beginning
-								spaceAfterBullet = max(settings.size * 3 - (settings.currentXOffset - xptr), settings.listExtraSpaceAfterBullet,0)
+								-- Create space after the bullet on the first line of text
+								settings.currentXOffset = settings.currentXOffset  + spaceAfterBullet
+								settings.leftIndent = spaceAfterBullet + bw
 							end
-
-							-- Create space after the bullet on the first line of text
-							settings.currentXOffset = settings.currentXOffset  + spaceAfterBullet
 
 
 
@@ -3009,8 +3022,8 @@ end
 					-- If we treat <li> as a block, then we can't treat a nested <ul> or <ol> as a block,
 					-- too, or we get extra spaces.
 					if ( blockTags[tag] ) then
-						print("----------------------------")
-						print ("PRE LOOP) Current tag; Space before:",tag, settings.spaceBefore)
+--						print("----------------------------")
+--						print ("PRE LOOP) Current tag; Space before:",tag, settings.spaceBefore)
 
 						if ( not (listTags[tag] and stacks.list.ptr > 1)) then
 							CRLF( "Before", tag )
@@ -3079,7 +3092,7 @@ end
 
 					if (tag == "br" or tag == "img") then
 						CRLF( "After", tag )
-print ("NEW LINE: br")
+--print ("NEW LINE: br")
 						renderXMLvars.currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex + 1
 						setStyleFromTag (tag, attr)
 						renderTextFromMargin = true
