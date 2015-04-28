@@ -2,18 +2,27 @@
 
 # style = font, size, leading, R,G,B, width, opacity, NORMAL|ALL_CAPS, text alignment, spaceBefore, spaceAfter, firstLineIndent, leftIndent, rightIndent
 
-#generic styles
-Normal = Avenir-Book,16,20,0,0,0,,100%
-Heading = Avenir-Bold,16,20,0,0,0,,100%
-Title=Avenir-Light,24,40,0.5,0.5,0.5,,100%,NORMAL,left,0,0,0,0,0
-H1=,18,26,0,0,0,,100%,NORMAL,left,12,4,0,0,0
-H2=Avenir-Book,18,26,0,0,0,,100%,NORMAL,left,12,4,0,0,0
-H2 Light=Avenir-Book,18,26,0.5,0.5,0.5,,100%,NORMAL,left,12,4,0,0,0
-H3=,16,26,0,0,0,,100%,NORMAL,left,8,0,0,0,0
-H4=,16,26,0,0,0,,100%,NORMAL,left,8,0,0,0,0
-H6=,16,26,0,0,0,,100%,NORMAL,left,8,0,0,0,0
-H5=,16,26,0,0,0,,100%,NORMAL,left,8,0,0,0,0
-Quote = Avenir-Light,20,28,0.5,0.5,0.5,,100%
+# default paragraph style
+body = Avenir-Roman ,16,20,0,0,0,,100%, none, left,0,0,0,0,0
+
+# common styles
+Heading = Avenir-Black,16,20,0,0,0,,100%,,left,0,0,0,0,0
+Title=Avenir-Black,24,40,0.5,0.5,0.5,,100%,,left,20,0,0,0,0
+
+H1=Avenir-Black ,18,26,0,0,0,,100%,,left,12,24,0,0,0
+H2=Avenir-Black ,18,26,0,0,0,,100%,,left,12,12,0,0,0
+H3=Avenir-Black,16,26,0,0,0,,100%,,left,8,0,0,0,0
+H4=Avenir-Black,16,26,0,0,0,,100%,,left,8,0,0,0,0
+H6=Avenir-Black,16,26,0,0,0,,100%,,left,8,0,0,0,0
+H5=Avenir-Black,16,26,0,0,0,,100%,,left,8,0,0,0,0
+
+Quote = Avenir-Roman  ,20,28,200,255,20,,100%
+
+hr = ,,,,,,,,, left,2,2,0,0,0
+
+# Default settings for hanging text in lists
+li = ,12,,,,,,,, left,0,0,-30,30,0
+ol = ,,,,,,,,, left,0,0,0,0,0
 
 # styles for the library
 eventListRowTime=AvenirNextCondensed-Medium,16,16,0.5,0.5,0.5,,100%,NORMAL,right,0,-20,0,0,0
