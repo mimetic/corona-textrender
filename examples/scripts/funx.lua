@@ -420,8 +420,7 @@ local function substitutions (s, t, escapeTheKeys)
 	for wrd in r do
 		local searchTerm = tclean[wrd] or wrd
 		if (t[wrd]) then
-			s = gsub(s, "{{"..searchTerm.."}}", t[wrd])
---print ("{{"..searchTerm.."}}", t[wrd],s)
+			s = gsub(s, "{{"..searchTerm.."}}", tostring(t[wrd]))
 		end
 	end
 	return s
@@ -567,12 +566,21 @@ end
 
 
 -- Dump an XML table
-local function dumptable(_class, no_func, depth, maxDepth)
+local function dumptable(_class, no_func, depth, maxDepth, filter)
+		
+		--  = string.match("foo 123 bar", '%d%d%d') -- %d matches a digit
+		local function passedFilter(t)
+			if not filter then
+				return true
+			end
+			return string.match(t, filter)
+		end
+
 	if (not _class) then
 		print ("dumptable: not a class.");
 		return;
 	end
-
+	
 	if(depth==nil) then depth=0; end
 	local str="";
 	for n=0,depth,1 do
@@ -597,21 +605,23 @@ local function dumptable(_class, no_func, depth, maxDepth)
 								print (str.."\t"..tostring(i).." = (not expanding this internal table)");
 				else
 					print (str.."\t"..tostring(i).." =");
-					dumptable(field, no_func, depth+1);
+					dumptable(field, no_func, depth+1, maxDepth, filter);
 				end
 			else
-				if(type(field)=="number") then
-					print (str.." [num]\t"..tostring(i).."="..field);
-				elseif(type(field) == "string") then
-					print (str.." [str]\t"..tostring(i).."=".."\""..field.."\"");
-				elseif(type(field) == "boolean") then
-					print (str.." [bool]\t"..tostring(i).."=".."\""..tostring(field).."\"");
-				else
-					if(not no_func)then
-						if(type(field)=="function")then
-							print (str.."\t"..tostring(i).."()");
-						else
-							print (str.."\t"..tostring(i).."<userdata=["..type(field).."]>");
+				if (passedFilter(i)) then
+					if(type(field)=="number") then
+						print (str.." [num]\t"..tostring(i).."="..field);
+					elseif(type(field) == "string") then
+						print (str.." [str]\t"..tostring(i).."=".."\""..field.."\"");
+					elseif(type(field) == "boolean") then
+						print (str.." [bool]\t"..tostring(i).."=".."\""..tostring(field).."\"");
+					else
+						if(not no_func)then
+							if(type(field)=="function")then
+								print (str.."\t"..tostring(i).."()");
+							else
+								print (str.."\t"..tostring(i).."<userdata=["..type(field).."]>");
+							end
 						end
 					end
 				end
