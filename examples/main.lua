@@ -78,13 +78,6 @@ funx.mkdir (cacheDir, "",false, system.CachesDirectory)
 
 local navbarHeight = 50
 
-
---===================================================================--
--- Clear text caches for TESTING only! Otherwise, you might change something
--- and see only the cached text, and not see the changes you made in your code.
-textrender.clearAllCaches(cacheDir)
-
-
 --===================================================================--
 -- Page background
 --===================================================================--
@@ -101,10 +94,11 @@ bkgd:setStrokeColor(.2, .2, .2, 1)
 -- Build a scrolling text field.
 --===================================================================--
 
-local x,y = 50,50
+local x,y = 20,100
 local width, height = display.contentWidth * .8, display.contentHeight * .8
 
 
+--===================================================================--
 -- Background Rectangle
 local strokeWidth = 1
 local padding = 0
@@ -123,13 +117,12 @@ local params = {
 	text =  mytext,	--loaded above
 	
 	width = width,
-	maxHeight = height,
+	maxHeight = 0,	-- Set to zero, otherwise rendering STOPS after this amount!
 
 	isHTML = true,
 	useHTMLSpacing = true,
 	
 	textstyles = textStyles,
-	cacheToDB = true,	-- true is default, for fast caches using sql database
 
 	-- Not needed, but defaults
 	font = "AvenirNext-Regular",
@@ -150,8 +143,8 @@ local params = {
 	
 	-- cacheDir is empty so we do not use caching with files, instead we use the SQLite database
 	-- which is faster.
-	cacheDir = "",
-	cacheToDB = true,
+	cacheDir = nil,
+	cacheToDB = true,	-- true is default, for fast caches using sql database
 }
 
 local textblock = textrender.autoWrappedText(params)
@@ -181,9 +174,82 @@ local options = {
 
 }
 
-local scrollblock = textblock:fitBlockToHeight( options )
-
+local textblock = textblock:fitBlockToHeight( options )
 local yAdjustment = textblock.yAdjustment
-scrollblock.x = x
-scrollblock.y = y
+textblock.x = x
+textblock.y = y
 
+
+-- Remove for testing below, but now it is cached
+textblock:removeSelf()
+
+local startTime = system.getTimer()
+local doCache = true
+local n = 10
+print ("Repeat textrender for "..n.." times.")
+if (doCache) then
+	print ("( using Caching )")
+end
+
+for i = 1, n do
+
+	print ("textrender #"..i )
+
+	-- Build
+	params.cacheToDB = doCache
+	textblock = textrender.autoWrappedText(params)
+
+	local textblock = textblock:fitBlockToHeight( options )
+	local yAdjustment = textblock.yAdjustment
+	textblock.x = x
+	textblock.y = y
+
+	-- Remove
+	textblock:removeSelf()
+	
+	if (not doCache) then
+		print ("Clear caches.")
+		textrender.clearAllCaches(cacheDir)
+	end
+
+end
+local totalTime = math.floor((system.getTimer() - startTime) * 100) / 100
+print ("Time for "..n.." repetitions: ".. totalTime  .. " milliseconds, average speed is " .. totalTime/n .. " milliseconds")
+
+
+textblock = textrender.autoWrappedText(params)
+
+local textblock = textblock:fitBlockToHeight( options )
+local yAdjustment = textblock.yAdjustment
+textblock.x = x
+textblock.y = y
+
+--===================================================================--
+-- Testing buttons
+
+local buttonX = screenW - 120
+local buttonY = 60
+
+
+local wf = false
+local function toggleWireframe()
+	wf = not wf
+	display.setDrawMode( "wireframe", wf )
+	if (not wf) then
+		display.setDrawMode( "forceRender" )
+	end
+	print ("WF = ",wf)
+end
+
+local widget = require ("widget")
+local wfb = widget.newButton{
+			label = "Wireframe",
+			labelColor = { default={ 0,0,0 }, over={ 1, 0, 0, 0.5 } },
+			fontSize = 20,
+			x =buttonX,
+			y=buttonY,
+			shape = "roundedRect",
+			fillColor = { default={ .7,.7,.7 }, over={ .2, .2, .2 } },
+			onRelease = toggleWireframe,
+		}
+wfb:toFront()

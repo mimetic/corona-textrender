@@ -5,19 +5,67 @@
 	<title>Test</title>
 
 	<style>
-		p {
+		body {
 			display: block;
 			margin-top: 0;
 			margin-bottom: 0em;
 			margin-left: 0;
 			margin-right: 0;
+			font-family: Avenir-Roman;
+			font-size: 16px;
+			line-height: 20px;
+			text-transform: uppercase;
 		}
+
+		p {
+			display: block;
+			margin-top: 0;
+			margin-bottom: 0;
+			margin-left: 0;
+			margin-right: 0;
+		}
+
+		li {
+			font-size: 12px;
+			padding-left:30px;
+		}
+		h1 {
+			font-family: Avenir-Black;
+			font-size: 18px;
+			line-height: 26px;
+			color: #000;
+			opacity: 1.0;
+			font-variant: normal;
+			text-align: left;
+			margin-top:12px;
+			margin-bottom:24px;
+			text-indent:0;
+			margin-left:0;
+			margin-right:0;
+		}
+
 		p.Left {
 			display: block;
 			margin-top: 0;
 			margin-bottom: 0;
 			margin-left: 0;
 			margin-right: 0;
+			font-family: Baskerville;
+			line-height: 20px;
+			font-size: 16px;
+			text-transform: none;
+		}
+		p.LeftIndent {
+			display: block;
+			text-indent:30px;
+			margin-top: 0;
+			margin-bottom: 0;
+			margin-left: 0;
+			margin-right: 0;
+			font-family: Baskerville;
+			line-height: 20px;
+			font-size: 16px;
+			text-transform: none;
 		}
 		p.Right {
 			display: block;
@@ -26,6 +74,10 @@
 			margin-bottom: 0;
 			margin-left: 0;
 			margin-right: 0;
+			font-family: Baskerville;
+			line-height: 20px;
+			font-size: 16px;
+			text-transform: none;
 		}
 		p.Center {
 			display: block;
@@ -34,21 +86,25 @@
 			margin-bottom: 0;
 			margin-left: 0;
 			margin-right: 0;
+			font-family: Baskerville;
+			line-height: 20px;
+			font-size: 16px;
+			text-transform: none;
 		}
 		
 /*
 style = font, size, leading, R,G,B, width, opacity, NORMAL|ALL_CAPS, text alignment, spaceBefore, spaceAfter, firstLineIndent, leftIndent, rightIndent
 */
 		p.Title {
-			font-family: Avenir-Light;
+			font-family: Avenir-Black;
 			font-size: 24px;
 			line-height: 40px;
 			color: #888;
 			opacity: 1.0;
 			font-variant: normal;
 			text-align: left;
-			margin-top:10px;
-			margin-bottom:6px;
+			margin-top:0px;
+			margin-bottom:0px;
 			text-indent:0;
 			margin-left:0;
 			margin-right:0;
@@ -57,15 +113,105 @@ style = font, size, leading, R,G,B, width, opacity, NORMAL|ALL_CAPS, text alignm
 	</style>
 
 </head>
+
+
 <body>
+<p class="Title">TextRender Example</p>
+
+<h1>
+	This is a sample HTML file for corona-textrender.
+</h1>
+
+
+<i>This text does not have &lt;p&gt;&lt;/p&gt; wrapped around it.</i><br>
+One of the most fantastic and most distinguishing features of this species <b>is the bold dark-bars</b> draped across the dorsal surface. Additional dark spots are found along the lateral surfaces of the species.
+<br>
 
 <p class="LeftIndent" >
 One of the most fantastic and <i>most distinguishing features</i> of this species <span style="color:rgb(1, .5, .2);">is the bold dark-bars</span> draped across the dorsal surface. Additional dark spots are found along the lateral surfaces of the species.
 </p>
 
-<p class="LeftIndent" >
-One of the most fantastic and <i>most distinguishing features</i> of this species <span style="color:rgb(1, .5, .2);">is the bold dark-bars</span> draped across the dorsal surface. Additional dark spots are found along the lateral surfaces of the species.
+<p class="Title">Unordered List:</p>
+<ul>
+	<li >Item 1</li>
+	<li><b>Item 2:</b> One of the most fantastic and <i>most distinguishing features</i> of this species <span style="color:rgb(1, .5, .2);">is the bold dark-bars</span> draped across the dorsal surface. Additional dark spots are found along the lateral surfaces of the species.</li>
+	<li>Item 3</li>
+</ul>
+
+
+<p class="Title">Ordered List:</p>
+<ol>
+	<li>One of the most fantastic and <i>most distinguishing features</i> of this species <span style="color:rgb(1, .5, .2);">is the bold dark-bars</span> draped across the dorsal surface. Additional dark spots are found along the lateral surfaces of the species.</li>
+	<li>Sub-List:</li>
+	<ol>
+		<li>sub-item 1</li>
+		<li>sub-item 2</li>
+	</ol>
+	<li>Item 3</li>
+	<li value="10">This item is #10 by setting the 'value' attribute</li>
+	<li>Another item</li>
+</ol>
+
+
+<p class="LeftIndent">
+	<b>Left-Indent Style:</b> One of the most fantastic and <i>most distinguishing features</i> of this species <span style="color:rgb(1, .5, .2);">is the bold dark-bars</span> draped across the dorsal surface. Additional dark spots are found along the lateral surfaces of the species.
 </p>
+
+<p class="Left" >
+	<b>Left Style:</b> One of the most fantastic and <i>most distinguishing features</i> of this species <span style="color:rgb(1, .5, .2);">is the bold dark-bars</span> draped across the dorsal surface. Additional dark spots are found along the lateral surfaces of the species.
+</p>
+
+<p class="Right" >
+	<B>Right Style:</B> One of the most fantastic and <i>most distinguishing features</i> of this species <span style="color:rgb(1, .5, .2);">is the bold dark-bars</span> draped across the dorsal surface. Additional dark spots are found along the lateral surfaces of the species.
+</p>
+
+<p class="Center" >
+	<b>Center Style:</b> One of the most fantastic and <i>most distinguishing features</i> of this species <span style="color:rgb(1, .5, .2);">is the bold dark-bars</span> draped across the dorsal surface. Additional dark spots are found along the lateral surfaces of the species.
+</p>
+<br>
+<br>
+<b><i>The following text is not surrounded by &lt;p&gt;</i></b><br>
+One of the most fantastic and <i>most distinguishing features</i> of this species <span style="color:rgb(1, .5, .2);">is the bold dark-bars</span> draped across the dorsal surface. Additional dark spots are found along the lateral surfaces of the species.
+
+<p style="color:rgb(.8,.8,.8);text-align:center; font-size:30; line-height:30px; margin-top:30px; margin-bottom:10px;">§§§</p>
+
+
+<p style="text-align:center;">
+Here is an example of the &lt;sup&gt; and &lt;sub&gt; tags. Note the extra spaces so the super/subscripts don't crowd each other.
+<br>
+<br>
+	<span style="size:20px;" >2 + 2<sup> 2<sup> 3</sup></sup> - <i>x<sub> n<sub> i</sub></sub></i>= 6</span>
+</p>
+
+<p style="color:rgb(.8,.8,.8);text-align:center; font-size:30; line-height:30px; margin-top:30px; margin-bottom:10px;">§§§</p>
+
+
+
+<p style="color:rgb(.8,.8,.8);text-align:center; font-size:30; line-height:30px; margin-top:30px; margin-bottom:10px;">§§§</p>
+
+
+
+<p style="text-align:left;">
+<i>Note:</i> The following is an image that is set to 50% of the text width:<br>
+<img src="assets/scrollbar-1.jpg" width="50%" alt="picture">
+</p>
+
+<br>
+<br>
+
+<p style="text-align:center;">
+	<img src="assets/scrollbar-2.jpg" width="400" alt="picture">
+</p>
+
+<br>
+<br>
+
+<p style="text-align:right;">
+	<img src="assets/scrollbar-3.jpg" alt="picture">
+</p>
+
+<br>
+<br>
 
 
 </body>

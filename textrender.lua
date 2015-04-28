@@ -46,13 +46,14 @@ DEALINGS IN THE SOFTWARE.
 
 
 ]]
-
+--display.setDrawMode( "wireframe", false )
 -- TESTING
 local testing = false
+
 -- Don't use the line-wrap cache
 local noCache = false
 if (noCache) then
-	print ("TEXTWRAP: CACHING TURNED OFF!")
+	print ("**** WARNING: TEXTWRAP: CACHING TURNED OFF FOR TESTING!!!! ****")
 end
 
 -- Main var for this module
@@ -104,6 +105,7 @@ local setCase = funx.setCase
 local fixCapsForReferencePoint = funx.fixCapsForReferencePoint
 local isPercent = funx.isPercent
 local loadImageFile = funx.loadImageFile
+local applyPercent = funx.applyPercent
 
 -- Set the width/height of screen. Might have changed from when module loaded due to orientation change
 local screenW, screenH = display.contentWidth, display.contentHeight
@@ -123,7 +125,7 @@ local function showTestLine(group, y, isFirstTextInBlock, i)
 	local q = display.newLine(group, 0,y,200,y)
 	i = i or 1
 	if (isFirstTextInBlock) then
-		q:setStrokeColor(250,0,0)
+		q:setStrokeColor(100,250,0)
 	else
 		q:setStrokeColor(80 * i,80 * i, 80)
 	end
@@ -190,10 +192,35 @@ local inline = {
 	var = true,
 }
 --]]
+local blockTags = {
+	address = true,
+	blockquote = true,
+	center = true,
+	dir = true, div = true, dl = true,
+	fieldset = true, form = true,
+	h1 = true, h2 = true, h3 = true, h4 = true, h5 = true, h6 = true, 
+	hr = true,
+	isindex = true,
+	-- Note, we treat <li> as a block, which is not standard HTML
+	li = true,
+	menu = true,
+	noframes = true,
+	ol = true,
+	p = true,
+	pre = true,
+	table = true,
+	ul = true,
+}
+
+local listTags = {
+	ol = true,
+	ul = true,
+}
 
 --------------------------------------------------------
 -- Common functions redefined for speed
 --------------------------------------------------------
+
 
 --------------------------------------------------------
 -- Convert pt values to pixels, for font sizing.
@@ -385,14 +412,14 @@ local function fitBlockToHeight(textblock, options )
 
 	local h = funx.percentOfScreenHeight(maxheight)
 	if (not h) then
-		h = screenH - tt - tb
+		h = screenH
 	end
 	-- width and height must be a multiple of four
 	h = ceil( h/4 ) * 4
 
 	local w = funx.percentOfScreenWidth(textblock.width)
 	if (not w) then
-		w = screenW - tl - tr
+		w = screenW
 	end
 	-- width and height must be a multiple of four
 	w = ceil( w/4 ) * 4
@@ -666,7 +693,7 @@ local function loadTextWrapFromCache(id, cacheDir)
 			local c = { wrapCache = json.decode(row.cache), baselineCache = json.decode(row.baseline), }
 			return c
 		else
---print ("NOT CACHED: ID",id)
+--print ("*** NOT CACHED: ID",id)
 			return false
 		end
 	else
@@ -902,12 +929,21 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 	-- FIXED VALUES
 	-- These should probably be changeable somewhere!
 	
+	-- Used to track x location while creating a line of text
+	settings.currentXOffset = 0
+	
 	-- Indent value in OL and UL lists
 	settings.listIndent = 10
 	settings.listExtraSpaceAfterBullet = 2
 	settings.listBulletToTextDistance = 30
 
 	-- ====================
+	
+	settings.isListTag = {
+		ol = true,
+		ul = true,
+	}
+	
 
 	settings.deviceMetrics = funx.getDeviceMetrics( )
 
@@ -945,7 +981,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 		settings.isHTML = text.isHTML or false
 		settings.useHTMLSpacing = text.useHTMLSpacing or false
 		
-		defaultStyle = text.defaultStyle or ""
+		defaultStyle = text.defaultStyle or "body"
 		cacheDir = text.cacheDir
 		settings.handler = text.handler
 		hyperlinkFillColor = text.hyperlinkFillColor or hyperlinkFillColor
@@ -989,6 +1025,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 	if (noCache) then
 		cacheDir = nil
 		T.cacheToDB = false
+		print ("WARNING: caching turned off for testing.")
 	end
 		
 	-- Default is to cache using the sqlite3 database.
@@ -1105,7 +1142,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 	settings.size = tonumber(size) or 12
 	settings.color = color or {0,0,0,255}
 	settings.width = width
-	settings.opacity = funx.applyPercent(opacity, OPAQUE) or OPAQUE
+	settings.opacity = applyPercent(opacity, OPAQUE) or OPAQUE
 	settings.targetDeviceScreenSize = targetDeviceScreenSize or screenW..","..screenH
 	settings.case = "none"
 	settings.decoration = "none"
@@ -1119,8 +1156,8 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 	settings.minLineCharCount = minCharCount or 5
 	settings.maxHeight = tonumber(maxHeight) or 0
 	settings.yOffset = 0	-- used for ascenders/descenders, superscript, subscript
-
- 	lineHeight = funx.applyPercent(lineHeight, settings.size) or floor(settings.size * 1.3)
+	
+ 	lineHeight = applyPercent(lineHeight, settings.size) or floor(settings.size * 1.3)
 
 	-- Scaling for device
 	-- Scale the text proportionally
@@ -1133,9 +1170,13 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 	local scalingRatio = funx.scaleFactorForRetina()
 
 	local currentLine = ''
+	
 	local lineCount = 0
-	-- x is start of line
+	
+	-- First line of text
 	local lineY = 0
+
+	-- x is start of line
 	local x = 0
 
 	local defaultSettings = {}
@@ -1238,6 +1279,11 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 		-- set style from params in a ### set, ... command line in the text
 		-- This depends on the closure for variables, such as font, size, etc.
 		local function setStyleFromCommandLine (params)
+		
+			if (not params) then
+				return
+			end
+		
 			-- font
 			if (params[2] and params[2] ~= "") then settings.font = trim(params[2]) end
 			-- font size
@@ -1257,7 +1303,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 			if ((params[5] and params[5] ~= "") and (params[6] and params[6] ~= "") and (params[7] and params[7] ~= "")) then
 				-- Handle opacity as RGBa or HDRa, not by itself
 				if (params[9] and params[9] ~= "") then
-					settings.color = {tonumber(params[5]), tonumber(params[6]), tonumber(params[7]), funx.applyPercent(params[9], OPAQUE) }
+					settings.color = {tonumber(params[5]), tonumber(params[6]), tonumber(params[7]), applyPercent(params[9], OPAQUE) }
 				else
 					settings.color = {tonumber(params[5]), tonumber(params[6]), tonumber(params[7]), OPAQUE }
 				end
@@ -1272,7 +1318,6 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 				settings.minLineCharCount = minCharCount or 5
 			end
 			-- opacity (Now always 100%)
-			--if (params[9] and params[9] ~= "") then settings.opacity = funx.applyPercent(params[9], OPAQUE) end
 			settings.opacity = 1.0
 			-- case (upper/normal)
 			if (params[10] and params[10] ~= "") then settings.case = lower(trim(params[10])) end
@@ -1337,11 +1382,11 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 			-- Scale the font
 			-- If value is a percentage, apply it
 			if (format['yOffset']) then
-				settings.yOffset = settings.yOffset + funx.applyPercent ( format.yOffset, settings.size, false)
+				settings.yOffset = settings.yOffset + applyPercent ( format.yOffset, settings.size, false)
 			end
 
 			if (format['scale']) then
-				settings.size = funx.applyPercent ( format.scale, settings.size, false)
+				settings.size = applyPercent ( format.scale, settings.size, false)
 			end
 			
 			-- font size
@@ -1391,13 +1436,14 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 
 			-- opacity
 			-- Now built into the color, e.g. RGBa color
-			--if (format.opacity) then settings.opacity = funx.applyPercent(format.opacity, OPAQUE) end
+			--if (format.opacity) then settings.opacity = applyPercent(format.opacity, OPAQUE) end
 
 			-- case (upper/normal) using *legacy* coding ("case")
 			if (format.case) then
 				settings.case = lower(trim(format.case))
 			end
-
+			
+			-- font-variant: none, uppercase, etc.
 			-- case, using CSS, e.g. "text-transform:uppercase"
 			if (format["text-transform"]) then settings.case = lower(trim(format["text-transform"])) end
 			-- Fix legacy "normal" setting, which in CSS is "none"
@@ -1417,7 +1463,9 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 			if (format['text-indent']) then settings.firstLineIndent = convertValuesToPixels(format['text-indent'], settings.size, settings.deviceMetrics) end
 
 			-- Left Indent
-			if (format['margin-left']) then settings.leftIndent = convertValuesToPixels(format['margin-left'], settings.size, settings.deviceMetrics) end
+			if (format['margin-left']) then 
+				settings.leftIndent = convertValuesToPixels(format['margin-left'], settings.size, settings.deviceMetrics) 
+			end
 
 			-- Right Indent
 			if (format['margin-right']) then settings.rightIndent = convertValuesToPixels(format['margin-right'], settings.size, settings.deviceMetrics) end
@@ -1442,10 +1490,19 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 
 			end
 
-			-- list bullet
-			if (format['bullet']) then
-				settings.bullet = format['bullet'] or "&#9679;"
+			-- List bullet
+			-- Default to disc
+
+			-- bullet set to nothing!
+			if ( format['bullet'] == "" ) then
+				settings.bullet = nil
+			elseif ( format['bullet'] == nil ) then
+			-- bullet not set, use default
+				settings.bullet = "&#9679;"
+			else
+				settings.bullet = format['bullet']
 			end
+
 			
 			
 			------------------------------------------------
@@ -1530,8 +1587,12 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 	-- Set the initial left side to 0
 	-- (FYI, the var is defined far above here!)
 	x = 0
-	local isFirstTextInBlock = true
-	local isFirstLine = true
+	
+	-- Flag for very first text in the entire XML block of text.
+	settings.isFirstTextInBlock = true
+	
+	-- Flag for first line of text of a chunk of text that ends with a return, like a paragraph.
+	settings.isFirstLine = true
 
 
 	-- And adjustment to better position the text.
@@ -1653,7 +1714,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 			-- stick this here cuz it needs the closure variables
 			---------
 			local function renderXML (xmlChunk)
-				
+			
 				local renderXMLvars = {}
 				local renderXMLresult = display.newGroup()
 				-- Need this positioniong rect so lines can be right/center justified inside of the result group
@@ -1680,7 +1741,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 					settings.currentFirstLineIndent = settings.firstLineIndent
 					settings.currentSpaceBefore = settings.spaceBefore
 					settings.currentSpaceAfter = settings.spaceAfter
-					isFirstLine = true
+					settings.isFirstLine = true
 				end
 
 				if (lineBreakType == "soft") then
@@ -1738,10 +1799,9 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 				-- Start rendering this text at the margin
 				local renderTextFromMargin = true
 
-				-- Track which element we are rendering. Only the first element starts at the margin,
-				-- all following elements continue on the lines and are wrapped, unless
-				-- there is a line break.
-				local elementCounter = 1
+				-- If this is an inline element, then apply 1st line indent
+				-- if needed. To begin, we are definitely on a first line.
+				settings.elementOnFirstLine = true
 
 				------------------------------------------------------------
 				-- RENDERING
@@ -1819,13 +1879,12 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 					tag = lower(tostring(tag))
 
 					-- Init stacks
-					stacks = stacks or { list = { ptr = 1 } }
+					stacks = stacks or { list = { ptr = 0 } }
 
 
 					------------------------------------------------------------
 					-- Function to render one parsed XML element, i.e a block of text
 					-- An element would be, for example: <b>piece of text</b>
-					-- NOT a <p>, but perhaps something inside <p></p>
 					------------------------------------------------------------
 					local function renderParsedElement(elementNum, element, tag, attr)
 
@@ -1840,7 +1899,6 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 							local tempLine, allTextInLine
 							local wordlen = 0
 							
-							local isFirstLineInElement = true
 
 							-- =======================================================
 							-- FUNCTIONS
@@ -1854,7 +1912,10 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 								
 								if (testing) then
 
-									testBkgdColor = testBkgdColor or {250,250,100,30}
+									testBkgdColor = testBkgdColor or {1,1,0.5,0.2}
+									local firstLineColor =  {1,0,0, 0.2}
+									local onFirstLineColor = firstLineColor or {0,1,0, 0.2}
+									local otherLinesColor = {0, 0, 1, 0.2}
 
 									-- when drawing the box, we compensate for the stroke, thus -2
 									local r = display.newRect(newDisplayLineGroup, 0, 0, newDisplayLineText.width-2, newDisplayLineText.height-2)
@@ -1862,9 +1923,23 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 									anchor(r, "BottomLeft")
 									r.x = newDisplayLineText.x+1
 									r.y = newDisplayLineText.y+1
+									
+									-- FALSE = show first line values, TRUE = show A or C render 
+									if (false) then
+										if (settings.elementOnFirstLine) then
+											r:setStrokeColor( unpack (onFirstLineColor) )
+											r:setFillColor(unpack(onFirstLineColor))
+										elseif (settings.isFirstLine) then
+											r:setStrokeColor( unpack (firstLineColor) )
+											r:setFillColor(unpack(firstLineColor))
+										else
+											r:setStrokeColor( unpack (otherLinesColor) )
+											r:setFillColor(unpack(otherLinesColor))
+										end
+									else
+										r:setFillColor(unpack(testBkgdColor))
+									end
 
-									r:setFillColor(unpack(testBkgdColor))
-									r:setStrokeColor(0,250,250,125)
 
 									r.isVisible = testing
 								end
@@ -1880,13 +1955,6 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 							
 							-- =======================================================
 							-- =======================================================
-
-							-- flag to indicate the text line to be rendered is the last line of the previously
-							-- rendered text (true) or is the continuation of that text (false)
-							-- Starts true for first item, then is false unless changed later.
-							if (elementCounter == 1) then
-								--renderTextFromMargin = true
-							end
 							
 							-- Do not render empty elements or an element that is just a space
 							-- MUST return an empty table!
@@ -1907,10 +1975,10 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 
 							-- If we're at the very first line of a text block, these
 							-- start at the Ascent, following InDesign defaults.
-							if (isFirstTextInBlock) then
+							if (settings.isFirstTextInBlock) then
 								lineY = ascent
+								settings.isFirstTextInBlock = false
 							end
-
 
 							-- Set the current width of the column, factoring in indents
 							-- Need the width to figure out how many words fit.
@@ -1970,10 +2038,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 							-- which happens if you make some sort of mathematical formula,
 							-- we have to capture it differently.
 							local isSingleHyphen = string.match(nextChunk, '^%s-(%-)%s-')
-							
---if (isSingleHyphen) then
---	print ("nextChunk ["..nextChunk.."]", isSingleHyphen)
---end
+
 							-- Preserve initial padding before first word
 							-- This captures spaces and hyphens!
 							if (not isSingleHyphen) then
@@ -2011,17 +2076,16 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 								if (testing) then
 									print ("********** Rendering from cache.")
 								end
-
 								for cachedChunkIndex, text in pairs(cachedChunk.text) do
 
 									local cachedItem = getCachedChunkItem(cachedChunk, cachedChunkIndex)
 									
 									-- Cached values
-									local isFirstLine = cachedItem.isFirstLine
-									local renderTextFromMargin = cachedItem.renderTextFromMargin
+									settings.isFirstLine = cachedItem.isFirstLine
+									settings.elementOnFirstLine = cachedItem.elementOnFirstLine
 
 									lineHeight = cachedItem.lineHeight
-									renderXMLvars.currentRenderedLineIndex = cachedItem.renderXMLvars.currentRenderedLineIndex
+									renderXMLvars.currentRenderedLineIndex = cachedItem.currentRenderedLineIndex
 									lineY = cachedItem.lineY
 									x = cachedItem.x
 									textAlignment = cachedItem.textAlignment
@@ -2078,7 +2142,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 									print ("")
 								end
 
-								---------------------------------------------
+							---------------------------------------------
 								--local word,spacer
 								local word, spacer, longword
 								for word, spacer in words do
@@ -2117,7 +2181,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 											-- ===================================
 											local firstLineIndent, leftIndent, rightIndent
 
-											if (isFirstLine) then
+											if (settings.elementOnFirstLine) then
 												firstLineIndent = settings.firstLineIndent
 											end
 										
@@ -2145,19 +2209,18 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 											-- as text, then move down a line on the screen and start again.
 											if (renderTextFromMargin) then
 												tempLineWidth = tempDisplayLineTxt.width
-												if (isFirstLine) then
+
+												if (settings.isFirstTextInBlock or settings.elementOnFirstLine) then
 													settings.currentFirstLineIndent = settings.firstLineIndent
 												else
 													settings.currentFirstLineIndent = 0
 												end
 											else
 												tempLineWidth = tempDisplayLineTxt.width + settings.currentXOffset
-												--settings.currentFirstLineIndent = 0
 											end
 
 											display.remove(tempDisplayLineTxt);
 											tempDisplayLineTxt=nil;
-
 
 
 											-- ===================================
@@ -2165,7 +2228,6 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 											-- This text may be an element inside a first line, so we must include the currentFirstLineIndent to calc the current line width.
 											-- Since indents may change per line, we have to reset this each time.
 											settings.currentWidth = settings.width - settings.leftIndent - settings.rightIndent - settings.currentFirstLineIndent
-
 											if (tempLineWidth <= settings.currentWidth * widthCorrection)  then
 												-- Do not render line, unless it is the last word,
 												-- in which case render ("C" render)
@@ -2189,23 +2251,22 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 			print ()
 			print ("----------------------------")
 			print ("A: Render line: ["..currentLine .. "]")
-			print ("renderXMLvars.currentRenderedLineIndex:", renderXMLvars.currentRenderedLineIndex)
-			--														print ("Font: [".. settings.font .. "]")
+--			print ("renderXMLvars.currentRenderedLineIndex:", renderXMLvars.currentRenderedLineIndex)
+--			print ("Font: [".. settings.font .. "]")
 			print ("settings.currentWidth",settings.currentWidth)
-			print ("isFirstLine", isFirstLine)
+			print ("settings.isFirstLine", settings.isFirstLine)
+			print ("settings.elementOnFirstLine", settings.elementOnFirstLine)
+			print ("settings.isFirstTextInBlock", settings.isFirstTextInBlock)
 			print ("renderTextFromMargin: ", renderTextFromMargin)
 			print ("lineY = ",lineY)
 			-- print ("   newDisplayLineGroup.y = ",lineY + descent .. " + " .. descent)
 		end
 
-														if (isFirstLine) then
+														if (settings.isFirstLine) then
 															currentLineHeight = lineHeight
 															settings.currentSpaceBefore = settings.spaceBefore
-															isFirstLine = false
+															settings.isFirstLine = false
 															settings.currentFirstLineIndent = settings.firstLineIndent
-															if (not isFirstTextInBlock and renderTextFromMargin) then
-																--lineY = lineY + currentLineHeight + settings.currentSpaceBefore
-															end
 														else
 															currentLineHeight = lineHeight
 															settings.currentSpaceBefore = 0
@@ -2241,10 +2302,8 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 														})
 														newDisplayLineText:setFillColor(unpack(settings.color))
 														anchorZero(newDisplayLineText, "BottomLeft")
-													
-														-- 
-														if (renderTextFromMargin and isFirstLineInElement) then
-															isFirstLineInElement = false
+
+														if (renderTextFromMargin) then
 															renderXMLvars.currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex + 1
 														end
 
@@ -2278,7 +2337,8 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 																		currentXOffset = settings.currentXOffset,
 
 																		renderTextFromMargin = renderTextFromMargin,
-																		isFirstLine = isFirstLine,
+																		isFirstLine = settings.isFirstLine,
+																		elementOnFirstLine = settings.elementOnFirstLine,
 
 																		currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex,
 																	})
@@ -2342,6 +2402,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 														-- And, we should now move our line cursor to the next row.
 														-- We know nothing can continue on this line because we've filled it up.
 														lineY = lineY + currentLineHeight
+														settings.elementOnFirstLine = false
 
 														-- Text lines can vary in height depending on whether there are upper case letters, etc.
 														-- Not predictable! So, we capture the height of the first line, and that is the basis of
@@ -2355,11 +2416,11 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 
 
 													else
-
 														--longword = true
 														renderTextFromMargin = true
 														settings.currentXOffset = 0
 														lineY = lineY + currentLineHeight
+														settings.elementOnFirstLine = false
 													end
 
 
@@ -2404,19 +2465,16 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 		print ("----------------------------")
 		print ("B: render a word: "..word)
 		print ("\nrenderTextFromMargin reset to TRUE.")
-		print ("isFirstLine", isFirstLine)
+		print ("settings.isFirstLine", settings.isFirstLine)
 		print ("   newDisplayLineGroup.y",lineY + descent, descent)
 		print ("leftIndent + currentFirstLineIndent", settings.leftIndent, settings.currentFirstLineIndent, settings.currentXOffset)
 	end
 
-														if (isFirstLine) then
+														if (settings.isFirstLine) then
 															currentLineHeight = lineHeight
 															settings.currentSpaceBefore = settings.spaceBefore
-															isFirstLine = false
+															settings.isFirstLine = false
 															settings.currentFirstLineIndent = settings.firstLineIndent
-															if (not isFirstTextInBlock and renderTextFromMargin) then
-																--lineY = lineY + currentLineHeight + settings.currentSpaceBefore
-															end
 														else
 															currentLineHeight = lineHeight
 															settings.currentSpaceBefore = 0
@@ -2455,8 +2513,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 														--newDisplayLineText.x, newDisplayLineText.y = 0, 0
 														--newDisplayLineText.alpha = settings.opacity
 
-														if (renderTextFromMargin and isFirstLineInElement) then
-															isFirstLineInElement = false
+														if (renderTextFromMargin) then
 															renderXMLvars.currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex + 1
 														end
 
@@ -2490,7 +2547,8 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 																		currentXOffset = settings.currentXOffset,
 
 																		renderTextFromMargin = renderTextFromMargin,
-																		isFirstLine = isFirstLine,
+																		isFirstLine = settings.isFirstLine,
+																		elementOnFirstLine = settings.elementOnFirstLine,
 
 																		currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex,
 																	})
@@ -2514,6 +2572,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 														-- so the next line surely must be the beginning
 														-- a new line. We know nothing can continue on this line because we've filled it up.
 														lineY = lineY + currentLineHeight
+														settings.elementOnFirstLine = false
 
 														renderTextFromMargin = true
 														settings.currentXOffset = 0
@@ -2572,59 +2631,49 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 										print ()
 										print ("----------------------------")
 										print ("C: Final line: ["..currentLine.."]", "length=" .. strlen(currentLine))
-										print ("Font: [".. settings.font .. "]")
-										print ("renderXMLvars.currentRenderedLineIndex:", renderXMLvars.currentRenderedLineIndex)
-										print ("isFirstLine", isFirstLine)
+--										print ("Font: [".. settings.font .. "]")
+--										print ("renderXMLvars.currentRenderedLineIndex:", renderXMLvars.currentRenderedLineIndex)
+										print ("lineY = ",lineY)
+										print ("settings.isFirstLine", settings.isFirstLine)
+										print ("settings.isFirstTextInBlock", settings.isFirstTextInBlock)
 										print ("renderTextFromMargin: ", renderTextFromMargin)
 										print ("Width,", settings.width)
 										print ("settings.currentWidth", settings.currentWidth)
-										print ("textAlignment: ", textAlignment)
-										print ("lineHeight: ", lineHeight)
+--										print ("textAlignment: ", textAlignment)
+--										print ("lineHeight: ", lineHeight)
 
 									end
 
 								
-									if (isFirstLine) then
+									if (settings.isFirstLine) then
 										currentLineHeight = lineHeight
 										settings.currentSpaceBefore = settings.spaceBefore
 										settings.currentFirstLineIndent = settings.firstLineIndent
-										-- If first line of a block of text, then we must start on a new line.
-										-- Jump to next line to start this text
-										if (not isFirstTextInBlock and renderTextFromMargin ) then
-											--lineY = lineY + currentLineHeight + settings.currentSpaceBefore
-										end
-										--renderTextFromMargin = true
 									else
 										currentLineHeight = lineHeight
-										settings.currentFirstLineIndent = 0
 										settings.currentSpaceBefore = 0
-										-- Not first line in a block of text, there might be something before it on the line,
-										-- e.g. a Bold/Italic block, so do not jump to next row
-										--lineY = lineY + currentLineHeight
+										if (not settings.elementOnFirstLine) then
+											settings.currentFirstLineIndent = 0
+										end
 									end
 
 									if (renderTextFromMargin) then
 										currentLine = ltrim(currentLine)
 										settings.currentXOffset = 0
 										settings.currentLeftIndent = settings.leftIndent
-									else
+									elseif (not settings.elementOnFirstLine ) then
 										settings.currentFirstLineIndent = 0
 										settings.currentLeftIndent = 0
 									end
 
 
-	--								if (testing) then
-	--									print ("Previous Line:", "["..prevTextInLine.."]", strlen(prevTextInLine))
-	--									print ("lineY:",lineY)
-	--									print ("settings.currentSpaceBefore:",settings.currentSpaceBefore, settings.spaceBefore)
-	--									print ("settings.currentSpaceAfter:",settings.currentSpaceAfter, settings.spaceAfter)
-	--								end
-
-									--print ("C: render a line:", currentLine)
-
 									local newDisplayLineGroup = display.newGroup()
 								
 									currentLine = setCase(settings.case, currentLine)
+if (testing) then
+	print ("renderParsedElement: (C) : Substitutions in current line with 'settings' table values.")
+	currentLine = funx.substitutions (currentLine, settings)
+end
 									
 									local newDisplayLineText = display.newText({
 										parent = newDisplayLineGroup,
@@ -2638,7 +2687,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 									newDisplayLineText:setFillColor(unpack(settings.color))
 									anchorZero(newDisplayLineText, "BottomLeft")
 
-									if (renderTextFromMargin and not isFirstLine) then
+									if (renderTextFromMargin and not settings.isFirstLine) then
 										renderXMLvars.currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex + 1
 									end
 
@@ -2672,7 +2721,9 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 													currentXOffset = settings.currentXOffset,
 
 													renderTextFromMargin = renderTextFromMargin,
-													isFirstLine = isFirstLine,
+													isFirstLine = settings.isFirstLine,
+													elementOnFirstLine = settings.elementOnFirstLine,
+
 
 													currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex,
 												})
@@ -2697,9 +2748,11 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 										yAdjustment = ( (settings.size / renderXMLvars.fontInfo.sampledFontSize ) * renderXMLvars.fontInfo.textHeight)- newDisplayLineGroup.height
 									end
 
-									createLinkingBox(newDisplayLineGroup, newDisplayLineText, currentLine, {250,0,0,30})
-									
-									isFirstLine = false
+									createLinkingBox(newDisplayLineGroup, newDisplayLineText, currentLine, {1,0,0,0.3})
+
+--print ("2702 settings.isFirstLine, settings.elementOnFirstLine, lineY: ", settings.isFirstLine, settings.elementOnFirstLine, lineY, "C: Final line: ["..currentLine.."]")
+
+									settings.isFirstLine = false
 									renderTextFromMargin = false
 
 									-- Clear the current line
@@ -2713,10 +2766,6 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 								cacheIndex = cacheIndex + 1							
 						end -- cached/not cached if
 
-						-- This will only be changed if we rendered an element.
-						-- If the element was empty, it won't make it this far.
-						isFirstTextInBlock = false
-						
 						return renderParsedElementResult
 
 
@@ -2726,8 +2775,9 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 					-- anything modifies them inside this tag.
 
 					local styleSettings = getAllStyleSettings()
-
-					tag, attr = convertHeaders(tag, attr)
+					
+					-- Convert h1, h2, etc. into <p class="h1">, etc.
+					--tag, attr = convertHeaders(tag, attr)
 					
 					-- Be sure the tag isn't null
 					tag = tag or ""
@@ -2737,18 +2787,44 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 					-- This is the opening tag, so we add space before and stuff like that.
 					------------------------------------------------------------
 
+
+
+							-- New line, Carriage Return
+							-- @param tag Name of the current tag, for testing display
+							-- @param pos Add current spacing before or after this CR
+							local function CRLF( pos, tag)
+								
+								local testing = false
+								
+								if (testing) then
+									tag = tag or ""
+									local c = settings.color
+									settings.color = {.8,0,0,0.7}
+									local pmarker = renderParsedElement(1, "¶ "..tag, "", "")
+									settings.color = c
+								end
+								pos = pos or "After"
+								lineY = lineY + lineHeight + settings["space"..pos]
+								--print ("CRLF ("..pos..") before/after",settings["spaceBefore"], settings["spaceAfter"])
+							end
+
+					
 					-- ================================================
 					-- Tags reset margins
 					-- ================================================
-					if (tag == "p" or tag == "div" or tag == "li" or tag == "ul" or tag == "ol") then
+					-- Note, we treat <li> as a block, which is not standard HTML!
+
+					if ( blockTags[tag] ) then 
 
 						-- Reset margins, cursor, etc. to defaults
-												
+						settings.elementOnFirstLine = true
 						renderTextFromMargin = true
 						settings.currentXOffset = 0
-						x = 0
+						settings.currentLeftIndent = 0
+						settings.currentFirstLineIndent = 0
 						settings.leftIndent = 0
 						settings.rightIndent = 0
+						x = 0
 						
 						-- Apply style based on tag, e.g. <ol> or <p>
 						if (textstyles and textstyles[tag] ) then
@@ -2757,12 +2833,11 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 						end
 						
 						-- Next, apply style settings
-						local styleName = "Normal"
+						local styleName = "body"
 						if (attr.class) then
 							styleName = lower(attr.class)
 							if (textstyles and textstyles[styleName] ) then
-								local params = textstyles[styleName]
-								setStyleFromCommandLine (params)
+								setStyleFromCommandLine ( textstyles[styleName] )
 							else
 								print ("WARNING: funx.autoWrappedText tried to use a missing text style ("..styleName..")")
 							end
@@ -2772,46 +2847,13 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 						settings.currentSpaceBefore = settings.spaceBefore
 						settings.currentSpaceAfter = settings.spaceAfter
 
-						-- Opening <p> makes us jump down one line.
-						if (not isFirstTextInBlock and renderTextFromMargin) then
-							lineY = lineY + lineHeight + settings.currentSpaceBefore
-						end
-						
-
-						-- ================================================
-						-- LISTS
 						if (tag == "ol" or tag == "ul" ) then
+						-- ================================================
+						-- LISTS: OL/UL
+						-- ================================================
 							-- Nested lists require left indentation
 							-- Left indent starting at 2nd level
-							local indent = 0
-							local multiplier = stacks.list.ptr - 1
 
--- Default (if no style set) is a hanging indent for a list
---settings.firstLineIndent = -30
---settings.leftIndent = 30
-
-
-multiplier = 1
-							
-							-- 2nd level?
-							if (true or stacks.list[stacks.list.ptr] and
-								stacks.list[stacks.list.ptr].tag) then
-								lineY = lineY + lineHeight + settings.currentSpaceAfter
-								indent = settings.listIndent
-							end
-							--settings.currentLeftIndent = settings.leftIndent + multiplier * indent
-							--settings.currentFirstLineIndent = settings.leftIndent + multiplier * indent
-							
-							
---print ("A ---")
---print ("settings.currentFirstLineIndent",settings.currentFirstLineIndent)
---print ("settings.currentLeftIndent",settings.currentLeftIndent)
---print ("settings.leftIndent",settings.leftIndent)
---print ("multiplier",multiplier)
---print ("---")
-
-
-							--settings.currentXOffset = settings.listIndent
 							stacks.list.ptr =  stacks.list.ptr + 1
 							local b = ""
 							if (tag == "ul") then
@@ -2829,7 +2871,7 @@ multiplier = 1
 									b = "&#8212;"
 								elseif (attr.bullet == "none") then
 									b = ""
-								elseif (attr.bullet == "") then
+								elseif (attr.bullet == nil) then
 									b = "&#9679;"
 								elseif (attr.bullet ~= "") then
 									b = attr.bullet
@@ -2839,88 +2881,98 @@ multiplier = 1
 							stacks.list[stacks.list.ptr] = { tag = tag, 
 										line = 1, 
 										bullet = b, 
-										indent = indent, 
+										indent = settings.listIndent * (stacks.list.ptr - 1), 
 										leftIndent = settings.leftIndent or 0, 
 										rightIndent = settings.rightIndent or 0,
 										padding = convertValuesToPixels(attr.padding),
 										}
 
-						-- LIST ITEMS: add a bullet or number
 						elseif  (tag == "li") then
-							
+						-- ================================================
+						-- LI tag
+						-- LIST ITEMS: add a bullet or number
+						-- Note, we treat the LI like a block, which is always standard.
+						-- ================================================
+
+							-- ----------
+							-- Create the LI block
+
 							-- Apply a 'value' attribute <li value="10" ...
 							if (attr.value) then
 								stacks.list[stacks.list.ptr].line = tonumber(attr.value)
 							end
-							
-							--settings.leftIndent = stacks.list[stacks.list.ptr].leftIndent
-							--settings.rightIndent = stacks.list[stacks.list.ptr].rightIndent
-							--settings.padding = stacks.list[stacks.list.ptr].padding
-							
-print ("B ---")
---print ("settings.currentFirstLineIndent",settings.currentFirstLineIndent)
---print ("settings.currentLeftIndent",settings.currentLeftIndent)
-print ("settings.leftIndent",settings.leftIndent, stacks.list[stacks.list.ptr].leftIndent)
-print ("---")
 
 							stacks.list[stacks.list.ptr] = stacks.list[stacks.list.ptr] or {}
 							-- default for list is a disk.
-							tempvar.t = ""
+							tempvar.bulletText = ""
 							-- If number, use the number instead
 							if (stacks.list[stacks.list.ptr].tag == "ol" ) then
-								tempvar.t = stacks.list[stacks.list.ptr].line .. ". " or ""
+								tempvar.bulletText = stacks.list[stacks.list.ptr].line .. ". " or ""
 								stacks.list[stacks.list.ptr].line = stacks.list[stacks.list.ptr].line + 1
 							else
-								tempvar.t = stacks.list[stacks.list.ptr].bullet or ""
+								tempvar.bulletText = stacks.list[stacks.list.ptr].bullet or ""
+							end
+						
+							if ( stacks.list[stacks.list.ptr].indent > 0 ) then
+								settings.leftIndent = settings.leftIndent  + stacks.list[stacks.list.ptr].indent
+							end
+							
+							if (tempvar.bulletText) then
+								-- get x ptr before adding the bullet
+								local xptr = settings.currentXOffset
+								tempvar.bullet = renderParsedElement(1, tempvar.bulletText, "", "")
+								local bw = settings.currentXOffset - xptr
+
+								-- Use 'padding' to set space after bullet. Crude but close to HTML
+								local spaceAfterBullet
+								if (attr.padding) then
+									spaceAfterBullet = convertValuesToPixels(attr.padding)
+								elseif (stacks.list[stacks.list.ptr].padding) then
+									spaceAfterBullet = tonumber(stacks.list[stacks.list.ptr].padding)
+								else
+									-- note: settings.listExtraSpaceAfterBullet is a constant, set at beginning
+									spaceAfterBullet = max(settings.size * 3 - (settings.currentXOffset - xptr), settings.listExtraSpaceAfterBullet,0)
+								end
+
+								-- Create space after the bullet on the first line of text
+								settings.currentXOffset = settings.currentXOffset  + spaceAfterBullet
+								settings.leftIndent = spaceAfterBullet + bw
 							end
 
-							-- add a space after the bullet
-							tempvar.t = tempvar.t .. " "
 
-							tempvar.bullet = renderParsedElement(1, tempvar.t, "", "")
 
-							-- Add one to the element counter so the next thing won't be on a new line
-							elementCounter = elementCounter + 1
+						-- ================================================
+						-- BR tag
+						-- ================================================
+						elseif (tag == "hr") then
+						-- ================================================
+						-- HR tag
+						-- ================================================
+							-- Reset to Normal
+							setStyleFromCommandLine (textstyles.hr or textstyles.body)
 							
-							-- get x ptr before adding the bullet
-							local xptr = x
-							-- Render the bullet and add to line
-							addToCurrentRenderedLine(tempvar.bullet, x, lineY, textAlignment, settings, tempvar.t)
+							tempvar.hrLineSize = attr.size or (convertValuesToPixels(attr.height) or 1)
+							tempvar.width = applyPercent(attr.width, width) or width
+							tempvar.width = tempvar.width
 							
-							-- Use 'padding' to set space after bullet. Crude but close to HTML
-							local spaceAfterBullet = tonumber(stacks.list[stacks.list.ptr].padding)
-
-							-- ---
-							-- The default style sheet should send indent on "li" to make it hanging
-							-- The default here is all flush left.
+							local hrg = display.newGroup()
+							funx.addPosRect(hrg, testing)
 							
-							-- How much space did the bullet take?
-							local bulletWidth = settings.currentXOffset - xptr
-
-							if (spaceAfterBullet == nil) then
-								spaceAfterBullet = settings.leftIndent - bulletWidth
-							end
-							if (spaceAfterBullet == nil) then
-							-- Move text to a 3em from the bullet, adjusting
-							-- for the bullet's width
-								spaceAfterBullet = max(settings.size * 3 - bulletWidth, settings.listExtraSpaceAfterBullet)
-							elseif (spaceAfterBullet < 0) then
-								spaceAfterBullet = 0
-							end
-
-							-- Create space after the bullet on the first line of text
-							settings.currentXOffset = settings.currentXOffset  + spaceAfterBullet
+							local hr = display.newRect(hrg, 0, 0, tempvar.width, tempvar.hrLineSize)
+							funx.anchor(hr, "BottomLeft")
+							hr:setFillColor(0,0,0,1)
 							
+							addToCurrentRenderedLine(hrg, x, lineY, "Center", settings, "---")
+
 						end
 
-					-- ================================================
-					-- BR tag
-					-- ================================================
 					elseif (tag == "br") then
 						renderTextFromMargin = true
 						settings.currentXOffset = 0
-						lineY = lineY + lineHeight + settings.currentSpaceAfter
+						settings.currentLeftIndent = 0
+						settings.currentFirstLineIndent = 0
 						x = 0
+
 
 					-- ================================================
 					-- Tags that do not reset margins
@@ -2950,133 +3002,141 @@ print ("---")
 								local image = funx.loadImageFile( attr.src, nil, system[attr.directory] )
 								anchor(image, "TopLeft")
 								if ( attr.width or attr.height) then
-									funx.ScaleObjToSize (image, funx.applyPercent(attr.width, width), attr.height)
+									funx.ScaleObjToSize (image, applyPercent(attr.width, width), attr.height)
 								end
 								lineY = lineY + image.contentHeight - lineHeight
 								addToCurrentRenderedLine(image, x, lineY, textAlignment, settings, attr.src)
 							else
 								local e = renderParsedElement(1, "Missing picture: "..attr.src, "", "")
-								addToCurrentRenderedLine(e, x, lineY, textAlignment, settings, attr.src)
+								-- renderParsedElement does this already:
+								--addToCurrentRenderedLine(e, x, lineY, textAlignment, settings, attr.src)
 							end
 						end
 					end
+					
 
+
+
+					-- -------------------------------------------------------
+					-- Block-level elements start on a new line (HTML spec's)
+					-- If we treat <li> as a block, then we can't treat a nested <ul> or <ol> as a block,
+					-- too, or we get extra spaces.
+					if ( blockTags[tag] ) then
+--						print("----------------------------")
+--						print ("PRE LOOP) Current tag; Space before:",tag, settings.spaceBefore)
+
+						if ( not (listTags[tag] and stacks.list.ptr > 1)) then
+							CRLF( "Before", tag )
+						end
+	
+					end
+
+
+					-- -------------------------------------------------------
 					-- Render XML into lines of text
-
 					for n, element in ipairs(parsedText) do
-
-						--local styleSettings = {}
+					
 						if (type(element) == "table") then
---print ("A-Tag",tag)
-							local saveStyleSettings = getAllStyleSettings()
+						
+							-- This tag is the PARENT tag of the current element!!!
+							-- The current element tag is in element._tag!!!
+
+--print("----------------------------")
+--print ("A) Parent Tag; current tag; in block?",tag, element._tag)
+
+
 							-- Apply a font formatting tag, e.g. bold or italic
 							-- These settings cascade to nested elements
-
+							local saveStyleSettings = getAllStyleSettings()
 							if (tag == "span" or tag == "a" or tag == "b" or tag == "i" or tag == "em" or tag == "strong" or tag == "font" or tag == "sup" or tag == "sub" ) then
 								setStyleFromTag (tag, attr)
 							end
 
 							local e = renderParsedText(element, element._tag, element._attr, parseDepth, stacks)
-
 							e.anchorX, e.anchorY = 0, 0
+							
+							-- Restore settings of parent element, saved above.
 							setStyleSettings(saveStyleSettings)
 
 						else
 							if (not element) then
 								print ("***** WARNING, EMPTY ELEMENT**** ")
 							end
-
-							-- Text that has no wrapper, i.e. that isn't inside of <p> or <ol>, etc.,
-							-- will be tagged 'body' and should be treated like <p>
-							if  (element and element ~= " " and tag == "body") then
-								lineY = lineY + lineHeight + settings.currentSpaceAfter
-							end
-
---print ("B-Tag",tag, element, currentXOffset)
+--print ("B) Tag, text : ",tag, ":",  element)
 							local saveStyleSettings = getAllStyleSettings()
 							
-							--if (isFirstLine and tag == "p" or tag == "div" or tag == "li" or tag == "ul") then
-								--element = trim(element)
-							--end
 							local e = renderParsedElement(n, element, tag, attr)
-
-							
 							e.anchorX, e.anchorY = 0, 0
-							elementCounter = elementCounter + 1
 							setStyleSettings(saveStyleSettings)
 						end
 
 					end -- end for
+					-- -------------------------------------------------------
 					
 
---print ("END OF LOOP")					
+--print ("END OF LOOP")
+
 					-- Close tags
 					-- AFTER rendering (so add afterspacing!)
-					if (tag == "p" or tag == "div") then
+					if ( blockTags[tag] ) then
+						lineY = lineY + settings.currentSpaceAfter
 						renderXMLvars.currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex + 1
 						setStyleFromTag (tag, attr)
 						renderTextFromMargin = true
-						lineY = lineY + settings.currentSpaceAfter
-						--lineY = lineY + currentLineHeight + settings.currentSpaceAfter
+						settings.isFirstLine = true
+						
+						settings.currentXOffset = 0
+						settings.isFirstLine = true						
+					end
 
-						-- Reset the first line of paragraph flag
-						isFirstLine = true
-						elementCounter = 1
-					elseif (tag == "br") then
+
+					if (tag == "br" or tag == "img") then
+						CRLF( "After", tag )
+--print ("NEW LINE: br")
 						renderXMLvars.currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex + 1
 						setStyleFromTag (tag, attr)
 						renderTextFromMargin = true
 						settings.currentXOffset = 0
-						isFirstLine = true
-						--elementCounter = 1
-					elseif (tag == "img") then
-						renderXMLvars.currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex + 1
-						setStyleFromTag (tag, attr)
-						renderTextFromMargin = true
-						settings.currentXOffset = 0
-						isFirstLine = true
-						--elementCounter = 1
+						settings.isFirstLine = true
+						
 					elseif (tag == "li") then
-						setStyleFromTag (tag, attr)
-						renderXMLvars.currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex + 1
-						renderTextFromMargin = true
-						lineY = lineY + settings.currentSpaceAfter
-						-- Reset the first line of paragraph flag
-						isFirstLine = true
-						elementCounter = 1
+						-- Treat <li> a block type
+--						setStyleFromTag (tag, attr)
+--						renderXMLvars.currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex + 1
+--						renderTextFromMargin = true
+--						-- Reset the first line of paragraph flag
+--						settings.isFirstLine = true
+--						CRLF( "After", tag )						
+--print ("NEW LINE: li")
 					elseif (tag == "ul") then
-						setStyleFromTag (tag, attr)
 						renderXMLvars.currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex + 1
+						setStyleFromTag (tag, attr)
 						renderTextFromMargin = true
-						--lineY = lineY + lineHeight + settings.currentSpaceAfter
-						--leftIndent = settings.leftIndent - stacks.list[stacks.list.ptr].indent
+						settings.currentXOffset = 0
+						settings.isFirstLine = true
 						stacks.list[stacks.list.ptr] = nil
-						stacks.list.ptr = stacks.list.ptr -1
-						elementCounter = 1
+						stacks.list.ptr = stacks.list.ptr - 1
+						
 					elseif (tag == "ol") then
-						setStyleFromTag (tag, attr)
 						renderXMLvars.currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex + 1
+						setStyleFromTag (tag, attr)
 						renderTextFromMargin = true
-						--lineY = lineY + lineHeight + settings.currentSpaceAfter
-						--leftIndent = settings.leftIndent - stacks.list[stacks.list.ptr].indent
+						settings.currentXOffset = 0
+						settings.isFirstLine = true
 						stacks.list[stacks.list.ptr] = nil
-						stacks.list.ptr = stacks.list.ptr -1
-						-- Reset the first line of paragraph flag
-						isFirstLine = true
-						elementCounter = 1
+						stacks.list.ptr = stacks.list.ptr - 1
 					elseif (tag == "#document") then
 						-- lines from non-HTML text will be tagged #document
 						-- and this will handle them.
 						renderTextFromMargin = true
+						settings.isFirstLine = true
 						--renderXMLvars.currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex + 1
 						settings.currentXOffset = 0
 						setStyleFromTag (tag, attr)
-						lineY = lineY + settings.currentSpaceAfter
---						elementCounter = 1
+						--lineY = lineY + settings.currentSpaceAfter
 					end
 
-					--print ("Restore style settings", settings.color[1], tag)
-					-- Restore style settings to what they were before
+					-- Now, overwrite Normal by restoring the style settings to what they were before
 					-- entering the tag
 
 					setStyleSettings(styleSettings)
@@ -3088,7 +3148,10 @@ print ("---")
 				-- This could be the opening to a paragraph, e.g. <p class="myclass">
 				-- or some text, or another XML chunk, e.g. <font name="Times">my text</font>
 				------------------------------------------------------------
-
+				
+				-- Set default style to 'body'
+				setStyleFromCommandLine ( textstyles.body )
+				
 				local e = renderParsedText(parsedText, parsedText._tag, parsedText._attr)
 				renderXMLresult:insert(e)
 				e.anchorX, e.anchorY = 0, 0

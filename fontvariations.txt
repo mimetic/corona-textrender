@@ -45,8 +45,8 @@ ASafePlacetoFall-Italic = ASafePlacetoFall
 
 
 #Avenir
-Avenir-Bold = Avenir-Medium
-Avenir-BoldItalic = Avenir-MediumOblique
+Avenir-Bold = Avenir-Black
+Avenir-BoldItalic = Avenir-BlackOblique
 Avenir-Italic = Avenir-Oblique
 Avenir-Black = Avenir-Black
 Avenir-BlackOblique = Avenir-BlackOblique
@@ -56,8 +56,6 @@ Avenir-Heavy = Avenir-Heavy
 Avenir-HeavyOblique = Avenir-HeavyOblique
 Avenir-Light = Avenir-Light
 Avenir-LightOblique = Avenir-LightOblique
-Avenir-Roman-Bold = Avenir-Medium
-Avenir-Roman-Italic = Avenir-Oblique
 
 #Avenir Next
 AvenirNext-Bold = AvenirNext-Bold
