@@ -1,18 +1,16 @@
-#SAMPLE TEXT STYLES
-# TEXT STYLES FOR CORONA GRAPHICS v2 (values between 0-1)
+# SAMPLE TEXT STYLES FOR CORONA GRAPHICS v2 (values between 0-1)
 
 # style = font, size, leading, R,G,B, width, opacity, NORMAL|ALL_CAPS, text alignment, spaceBefore, spaceAfter, firstLineIndent, leftIndent, rightIndent
 
 # default paragraph style
 body = Avenir-Roman ,16,20,0,0,0,,100%, none, left,0,0,0,0,0
-#body = Avenir-Roman ,16,20,.8,.8,.8,,100%, ALL_CAPS, left,0,0,0,0,0
 
 # common styles
 Heading = Avenir-Black,16,20,0,0,0,,100%,,left,0,0,0,0,0
-Title=Avenir-Black,24,40,0.5,0.5,0.5,,100%,,left,20,0,0,0,0
+Title=Avenir-Black,24,32,0.5,0.5,0.5,,100%,,left,10,0,0,0,0
 
-H1=Avenir-Black ,18,26,0,0,0,,100%,,left,12,24,0,0,0
-H2=Avenir-Black ,18,26,0,0,0,,100%,,left,12,12,0,0,0
+H1=Avenir-Black ,24,26,0,0,0,,100%,,left,12,24,0,0,0
+H2=Avenir-Black ,20,26,0,0,0,,100%,,left,12,12,0,0,0
 H3=Avenir-Black,16,26,0,0,0,,100%,,left,8,0,0,0,0
 H4=Avenir-Black,16,26,0,0,0,,100%,,left,8,0,0,0,0
 H6=Avenir-Black,16,26,0,0,0,,100%,,left,8,0,0,0,0

@@ -1,4 +1,3 @@
---====================================================================--
 -- TextRender example
 --
 -- Shows use of the textrender widget
@@ -55,6 +54,9 @@ DEALINGS IN THE SOFTWARE.
 --]]
 
 
+-- Run test for cache speed by drawing/redrawing
+local testCacheSpeed = false
+
 -- My useful function collection
 local funx = require("scripts.funx")
 
@@ -94,9 +96,8 @@ bkgd:setStrokeColor(.2, .2, .2, 1)
 -- Build a scrolling text field.
 --===================================================================--
 
-local x,y = 20,100
-local width, height = display.contentWidth * .8, display.contentHeight * .8
-
+local width, height = display.contentWidth * .8, (display.contentHeight * .8) - 40
+local x,y = 20, (display.contentHeight - height)/2
 
 --===================================================================--
 -- Background Rectangle
@@ -110,6 +111,41 @@ textblockBkgd.y = y - padding
 textblockBkgd.strokeWidth = strokeWidth
 textblockBkgd:setStrokeColor( 0,0,0,0.3)
 
+--===================================================================--
+textrender.clearAllCaches(cacheDir)
+
+
+local msgblock = display.newGroup()
+msgblock.x = x - padding
+msgblock.y = y - 40
+
+local function removeMsgBlock()
+	if (msgblock) then
+		msgblock:removeSelf()
+		msgblock = nil
+	end
+end
+
+local function hyperlinkdemo( e )
+
+	local mytext = "<p style='font:Avenir;size:18px;'><i>A <u>hyperlink</u> was tapped! The text is <i><b>“" .. e.target._attr.text .. "”</b></p>"
+
+	local params = {
+		text =  mytext,	--loaded above
+		width = width,
+		maxHeight = 0,	-- Set to zero, otherwise rendering STOPS after this amount!
+		isHTML = true,
+		}
+
+	-- Clear existing message block
+	removeMsgBlock()
+	-- Create the message
+	msgblock = textrender.autoWrappedText(params)
+	msgblock.x = x - padding
+	msgblock.y = y - 40
+	
+	timer.performWithDelay( 3000, removeMsgBlock )
+end
 
 --===================================================================--
 -- Text Field
@@ -140,6 +176,10 @@ local params = {
 	
 	-- not necessary, might not even work
 	targetDeviceScreenSize = screenW..","..screenH,	-- Target screen size, may be different from current screen size
+	
+	-- The handler is the function executed when a hyperlink is tapped.
+	-- It will get the HREF from the <a> tag.
+	handler = hyperlinkdemo,
 	
 	-- cacheDir is empty so we do not use caching with files, instead we use the SQLite database
 	-- which is faster.
@@ -179,50 +219,51 @@ local yAdjustment = textblock.yAdjustment
 textblock.x = x
 textblock.y = y
 
+if (testCacheSpeed) then
+	-- Remove for testing below, but now it is cached
+	textblock:removeSelf()
 
--- Remove for testing below, but now it is cached
-textblock:removeSelf()
+	local startTime = system.getTimer()
+	local doCache = true
+	local n = 10
+	print ("Repeat textrender for "..n.." times.")
+	if (doCache) then
+		print ("( using Caching )")
+	end
 
-local startTime = system.getTimer()
-local doCache = true
-local n = 10
-print ("Repeat textrender for "..n.." times.")
-if (doCache) then
-	print ("( using Caching )")
-end
+	for i = 1, n do
 
-for i = 1, n do
+		print ("textrender #"..i )
 
-	print ("textrender #"..i )
+		-- Build
+		params.cacheToDB = doCache
+		textblock = textrender.autoWrappedText(params)
 
-	-- Build
-	params.cacheToDB = doCache
+		local textblock = textblock:fitBlockToHeight( options )
+		local yAdjustment = textblock.yAdjustment
+		textblock.x = x
+		textblock.y = y
+
+		-- Remove
+		textblock:removeSelf()
+	
+		if (not doCache) then
+			print ("Clear caches.")
+			textrender.clearAllCaches(cacheDir)
+		end
+
+	end
+	local totalTime = math.floor((system.getTimer() - startTime) * 100) / 100
+	print ("Time for "..n.." repetitions: ".. totalTime  .. " milliseconds, average speed is " .. totalTime/n .. " milliseconds")
+
+
 	textblock = textrender.autoWrappedText(params)
 
 	local textblock = textblock:fitBlockToHeight( options )
 	local yAdjustment = textblock.yAdjustment
 	textblock.x = x
 	textblock.y = y
-
-	-- Remove
-	textblock:removeSelf()
-	
-	if (not doCache) then
-		print ("Clear caches.")
-		textrender.clearAllCaches(cacheDir)
-	end
-
-end
-local totalTime = math.floor((system.getTimer() - startTime) * 100) / 100
-print ("Time for "..n.." repetitions: ".. totalTime  .. " milliseconds, average speed is " .. totalTime/n .. " milliseconds")
-
-
-textblock = textrender.autoWrappedText(params)
-
-local textblock = textblock:fitBlockToHeight( options )
-local yAdjustment = textblock.yAdjustment
-textblock.x = x
-textblock.y = y
+end -- test cache speed
 
 --===================================================================--
 -- Testing buttons
