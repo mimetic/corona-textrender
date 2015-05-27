@@ -3390,11 +3390,11 @@ end
 -- we have to allow for a special code for line breaks: [[[cr]]]
 --------------------------------------------------------
 
-local function autoWrappedText (text, font, size, lineHeight, color, width, textAlignment, opacity, minCharCount, targetDeviceScreenSize, letterspacing, maxHeight, minWordLen, textstyles, defaultStyle, cacheDir)
+local function autoWrappedText ( p )
 
-	local textwrap = require ("textwrap")
+	local textwrap = require ("scripts.textrender.textrender")
 
-	return textwrap.autoWrappedText(text, font, size, lineHeight, color, width, textAlignment, opacity, minCharCount, targetDeviceScreenSize, letterspacing, maxHeight, minWordLen, textstyles, defaultStyle, cacheDir)
+	return textwrap.autoWrappedText( p )
 
 end
 
