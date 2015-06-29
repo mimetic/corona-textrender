@@ -221,7 +221,7 @@ local function timePassed(msg)
 	local t = t2 - lastTimePassed
 	lastTimePassed = t2
 	msg = msg or ""
-	print ("funx.timePassed: ", floor(t) .. "ms", msg) --, "Total:", floor(t2-firstTime))
+	print ("scripts.funx.timePassed: ", floor(t) .. "ms", msg) --, "Total:", floor(t2-firstTime))
 	io.flush( )
 end
 
@@ -247,7 +247,7 @@ end
 
 -----------------
 local function traceback ()
-	print ("FUNX.TRACEBACK:")
+	print ("scripts.funx.TRACEBACK:")
 	local level = 1
 	while true do
 		local info = debug.getinfo(level, "Sl")
@@ -403,7 +403,7 @@ end
 local function substitutions (s, t, escapeTheKeys)
 
 	if (not s or not t or t=={}) then
-		--print ("funx.substitutions: No Values passed!")
+		--print ("scripts.funx.substitutions: No Values passed!")
 		return s
 	end
 
@@ -433,7 +433,7 @@ end
 -- Returns the string with the fields filled in.
 local function OLD_substitutionsSLOWER (s, t)
 	if (not s or not t or t=={}) then
-		--print ("funx.substitutions: No Values passed!")
+		--print ("scripts.funx.substitutions: No Values passed!")
 		return s
 	end
 	--local r = gfind(s,"%b{}")

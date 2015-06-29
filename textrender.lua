@@ -1,6 +1,6 @@
 -- textrender.lua
 --
--- Version 3.1
+-- Version 3.1.1
 --
 -- Copyright (C) 2015 David I. Gross. All Rights Reserved.
 --
