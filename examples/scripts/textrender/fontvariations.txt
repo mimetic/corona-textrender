@@ -58,7 +58,7 @@ Avenir-Light = Avenir-Light
 Avenir-LightOblique = Avenir-LightOblique
 
 #Avenir Next
-AvenirNext-Bold = AvenirNext-Bold
+AvenirNext-Bold = AvenirNext-DemiBold
 AvenirNext-BoldItalic = AvenirNext-BoldItalic
 AvenirNext-DemiBold = AvenirNext-DemiBold
 AvenirNext-DemiBoldItalic = AvenirNext-DemiBoldItalic
