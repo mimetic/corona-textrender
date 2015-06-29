@@ -223,6 +223,31 @@ local isListTag = {
 
 
 --------------------------------------------------------
+-- Convert CSS relational font sizings to percent
+-- e.g. x-large = 150%
+-- Return the new font size based on the one give
+-- If no keyword found, then return current fontsize
+-- Source: http://www.trishasdesignstudio.com/font-size-conversion-chart.asp
+local function keywordFontsizeRatio (keyword)
+	local sizes = {
+		xxsmall	= 0.55,
+		xsmall	= 0.625,
+		small 	= 0.8,
+		medium 	= 1,
+		large	= 1.2,
+		xlarge	= 1.5,
+		xxlarge	= 2.55,
+	}
+	return (sizes[lower(keyword:gsub("%-",""))] or 1)
+end
+
+
+local function convertCSSFontsizeKeyword(keyword, fontsize)
+	fontsize = fontsize or 14	-- defaut to 14px if something goes wrong
+	return fontsize * keywordFontsizeRatio(keyword)
+end
+
+--------------------------------------------------------
 -- Convert pt values to pixels, for font sizing.
 -- We use the font height for 1em.
 -- Basically, I think we should just use the pt sizing as
@@ -237,12 +262,20 @@ local function convertValuesToPixels (t, fontsize, deviceMetrics)
 		t = trim(t)
 		local _, _, n = find(t, "^(%--%d+)")
 		local _, _, u = find(t, "(%a%a)$")
+		
+		-- Handle textual fontsizing, e.g. "x-large"
+--print ("A -----> ", t, fontsize)
+		n = convertCSSFontsizeKeyword(t, fontsize)
+--print ("B -----> ", t, n)
+	
 	
 		if ((u == "pt" ) and deviceMetrics) then
 			n = n * (deviceMetrics.ppi/72)
 		elseif (u == "em" and deviceMetrics) then
 			n = n * fontsize * (deviceMetrics.ppi/72)
 		end
+--print ("C Result:",n)
+--print ("  ")
 		return tonumber(n)
 	end
 end
@@ -1404,6 +1437,12 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 				if (format['font-size']) then
 					-- convert pt values to px
 					settings.size = convertValuesToPixels(format['font-size'], settings.size, settings.deviceMetrics)
+
+					-- Change lineheight to match a change in font size when using
+					-- somethign like "x-large"
+					-- If the fontsize is not something like x-large, this will have no effect
+					lineHeight = lineHeight * keywordFontsizeRatio(format['font-size'])
+
 				else
 					settings.size = convertValuesToPixels(format['size'], settings.size, settings.deviceMetrics)
 				end
@@ -1411,7 +1450,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 				-- reset min char count in case we loaded a BIG font
 				settings.minLineCharCount = minCharCount or 5
 			end
-
+			
 			-- lineHeight (HTML property)
 			if (format.lineHeight) then
 				lineHeight = convertValuesToPixels (format.lineHeight, settings.size, settings.deviceMetrics)
