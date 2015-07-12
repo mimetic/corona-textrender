@@ -2880,6 +2880,22 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 
 					
 					-- ================================================
+					-- NON-HTML : Move down a line using current lineheight.
+					-- ================================================
+					if (not settings.isHTML) then
+						CRLF( "Before" )
+
+						renderXMLvars.currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex + 1
+						renderTextFromMargin = true
+						settings.currentXOffset = 0
+						settings.isFirstLine = true
+						settings.currentLeftIndent = 0
+						settings.currentFirstLineIndent = 0
+						x = 0
+					end
+					
+					
+					-- ================================================
 					-- Tags reset margins
 					-- ================================================
 					-- Note, we treat <li> as a block, which is not standard HTML!
@@ -3187,6 +3203,18 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 						settings.currentXOffset = 0
 						setStyleFromTag (tag, attr)
 						--lineY = lineY + settings.currentSpaceAfter
+					end
+
+					if (not settings.isHTML) then
+						lineY = lineY + settings["spaceAfter"]
+						
+						renderXMLvars.currentRenderedLineIndex = renderXMLvars.currentRenderedLineIndex + 1
+						renderTextFromMargin = true
+						settings.currentXOffset = 0
+						settings.isFirstLine = true
+						settings.currentLeftIndent = 0
+						settings.currentFirstLineIndent = 0
+						x = 0
 					end
 
 					-- Now, overwrite Normal by restoring the style settings to what they were before
