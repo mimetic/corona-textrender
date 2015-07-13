@@ -49,7 +49,7 @@ DEALINGS IN THE SOFTWARE.
 --display.setDrawMode( "wireframe", false )
 -- TESTING
 local testing = false
-local noCache = false
+local noCache = true
 
 if (noCache) then
 	print ("**** WARNING: TEXTWRAP: CACHING TURNED OFF FOR TESTING!!!! ****")
