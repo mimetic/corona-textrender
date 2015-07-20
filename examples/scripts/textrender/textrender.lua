@@ -49,10 +49,10 @@ DEALINGS IN THE SOFTWARE.
 --display.setDrawMode( "wireframe", false )
 -- TESTING
 local testing = false
-local noCache = true
+local noCache = false
 
 if (noCache) then
-	print ("**** WARNING: TEXTWRAP: CACHING TURNED OFF FOR TESTING!!!! ****")
+	print ("**** WARNING: textrender: CACHING TURNED OFF FOR TESTING!!!! ****")
 end
 
 -- Main var for this module
@@ -1056,7 +1056,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 	if (noCache) then
 		cacheDir = nil
 		T.cacheToDB = false
-		print ("WARNING: caching turned off for testing.")
+		print ("WARNING: textrender: caching turned off for testing.")
 	end
 		
 	-- Default is to cache using the sqlite3 database.
@@ -1314,7 +1314,10 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 			if (not params) then
 				return
 			end
-		
+
+-- testing:
+--local ss = funx.tableCopy(settings)
+
 			-- font
 			if (params[2] and params[2] ~= "") then settings.font = trim(params[2]) end
 			-- font size
@@ -1384,6 +1387,19 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 				-- Alignment happens after a whole line is built.
 				x = 0
 			end
+
+
+--print (" ------------------------------")
+--for k,v in pairs (settings) do
+--	if (ss[k] ~= settings[k]) then
+--		print ("--> " .. k .. " has changed to ", settings[k])
+--		if (type(settings[k]) == "table") then
+--			funx.dump(settings[k])
+--		end
+--		
+--	end
+--end
+--print (" ")
 		end
 
 
@@ -3054,10 +3070,15 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 						-- with a <span>. I mean, that's how the conversion comes in.
 						-- So, let's require that we color links by hand (or by InDesign)
 						-- Unless we pass the hyperlinkTextColor!
-						if (hyperlinkTextColor) then 
-							attr.color = "(" .. hyperlinkTextColor .. ")"	-- parens are parsed by setStyleFromTag()
+
+						-- Apply style based on textstyles "a" value, if it exists.
+						if ( textstyles[tag] ) then
+							setStyleFromCommandLine ( textstyles[tag] )
+						elseif (hyperlinkTextColor) then 
+							-- parens are parsed by setStyleFromTag()
+							attr.color = "(" .. hyperlinkTextColor .. ")"	
 						end
-						
+
 					-- Ignore <style> and <script> blocks.
 					elseif (tag == "style" or tag == "script" or tag=="head" ) then
 						parsedText = {}
@@ -3123,10 +3144,12 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 							-- Apply a font formatting tag, e.g. bold or italic
 							-- These settings cascade to nested elements
 							local saveStyleSettings = getAllStyleSettings()
-						
+-- I AM NOT SURE THESE TAGS EVER GET HERE!?!?
 							if (tag == "span" or tag == "a" or tag == "b" or tag == "i" or tag == "em" or tag == "strong" or tag == "font" or tag == "sup" or tag == "sub" ) then
+								-- Now, apply any settings in the tag itself
 								setStyleFromTag (tag, attr)
 							end
+
 							local e = renderParsedText(element, element._tag, element._attr, parseDepth, stacks)
 							e.anchorX, e.anchorY = 0, 0
 
