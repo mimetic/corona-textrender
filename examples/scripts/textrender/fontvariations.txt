@@ -20,6 +20,11 @@ AmericanTypewriter-CondensedBold = AmericanTypewriter-CondensedBold
 AmericanTypewriter-CondensedLight = AmericanTypewriter-CondensedLight
 AmericanTypewriter-Light = AmericanTypewriter-Light
 
+APHont-BoldItalic = APHont-BoldItalic
+APHont-Bold = APHont-Bold
+APHont-Italic = APHont-Italic
+APHont = APHont-Regular
+
 #Apple Color Emoji
 #AppleColorEmoji = AppleColorEmoji
 
@@ -56,9 +61,11 @@ Avenir-Heavy = Avenir-Heavy
 Avenir-HeavyOblique = Avenir-HeavyOblique
 Avenir-Light = Avenir-Light
 Avenir-LightOblique = Avenir-LightOblique
+Avenir-Roman-Bold = Avenir-Medium
+Avenir-Roman-Italic = Avenir-Oblique
 
 #Avenir Next
-AvenirNext-Bold = AvenirNext-DemiBold
+AvenirNext-Bold = AvenirNext-Bold
 AvenirNext-BoldItalic = AvenirNext-BoldItalic
 AvenirNext-DemiBold = AvenirNext-DemiBold
 AvenirNext-DemiBoldItalic = AvenirNext-DemiBoldItalic
@@ -95,6 +102,15 @@ Baskerville-BoldItalic = Baskerville-BoldItalic
 Baskerville-Italic = Baskerville-Italic
 Baskerville-SemiBold = Baskerville-SemiBold
 Baskerville-SemiBoldItalic = Baskerville-SemiBoldItalic
+
+#BobbyJ
+BobbyJ-Bold = BobbyJ-Bold
+BobbyJ = BobbyJ-Regular
+BobbyJ-Regular-Bold = BobbyJ-Bold
+BobbyJRough-Bd = BobbyJRough-Bd
+BobbyJRough-Rg = BobbyJRough-Rg
+BobbyJSerif-Bld = BobbyJSerif-Bld
+BobbyJSerif = BobbyJSerif-Rg
 
 #Bodoni Ornaments
 #BodoniOrnamentsITCTT = BodoniOrnamentsITCTT

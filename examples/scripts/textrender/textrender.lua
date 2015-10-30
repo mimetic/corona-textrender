@@ -243,7 +243,7 @@ end
 
 
 local function convertCSSFontsizeKeyword(keyword, fontsize)
-	fontsize = fontsize or 14	-- defaut to 14px if something goes wrong
+	fontsize = fontsize or 14	-- default to 14px if something goes wrong
 	return fontsize * keywordFontsizeRatio(keyword)
 end
 
@@ -256,18 +256,25 @@ end
 -- Using 72 pixels per point:
 -- 12pt => 72/72  * 12pt => 12px
 -- 12pt => 132/72 * 12pt => 24px
+-- @param t = [string] The new font size, including units or as text, e.g. 'small'
+-- @param fontsize = [number] Fallback font-size, usually whatever it current is before we try to change it
 --------------------------------------------------------
-local function convertValuesToPixels (t, fontsize, deviceMetrics)
+local function convertValuesToPixels (t, fontsizeFallback, deviceMetrics)
 	if (t ~= nil) then
 		t = trim(t)
+		-- Get the numeric part of the size, e.g. 15pt -> 15
 		local _, _, n = find(t, "^(%--%d+)")
+		-- Get the units, e.g. pt or px, e.g. 15pt -> pt
 		local _, _, u = find(t, "(%a%a)$")
 		
 		-- Handle textual fontsizing, e.g. "x-large"
---print ("A -----> ", t, fontsize)
-		n = convertCSSFontsizeKeyword(t, fontsize)
+--print ("A -----> ", t, fontsizeFallback)
+		n = convertCSSFontsizeKeyword(t, n)
 --print ("B -----> ", t, n)
-	
+		
+		if (tonumber(n) == 0) then
+			n = fontsizeFallback
+		end
 	
 		if ((u == "pt" ) and deviceMetrics) then
 			n = n * (deviceMetrics.ppi/72)
@@ -1019,6 +1026,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 		hyperlinkTextColor = text.hyperlinkTextColor or hyperlinkTextColor
 		
 		testing = testing or text.testing
+		noCache = noCache or text.noCache
 		
 		-- Default is true, allow set to false here
 		if (text.cacheToDB ~= nil) then
@@ -1414,7 +1422,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 			if (not format or format == {}) then
 				return 
 			end
-			
+
 --			if (tag == "sup") then
 --				settings.currentXOffset = settings.currentXOffset + 1
 --			end
@@ -1447,18 +1455,15 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 					settings.currentXOffset = settings.currentXOffset + settings.fontscaleChangeFudge
 				end
 			end
-			
 			-- font size
 			if (format['font-size'] or format['size']) then
 				if (format['font-size']) then
 					-- convert pt values to px
 					settings.size = convertValuesToPixels(format['font-size'], settings.size, settings.deviceMetrics)
-
 					-- Change lineheight to match a change in font size when using
 					-- somethign like "x-large"
 					-- If the fontsize is not something like x-large, this will have no effect
 					lineHeight = lineHeight * keywordFontsizeRatio(format['font-size'])
-
 				else
 					settings.size = convertValuesToPixels(format['size'], settings.size, settings.deviceMetrics)
 				end
