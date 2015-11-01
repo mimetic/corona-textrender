@@ -30,6 +30,9 @@ DEALINGS IN THE SOFTWARE.
 
 local FUNX = {}
 
+local pathToFunxFolder = "scripts/funx/"
+local dotPathToFunxFolder = "scripts.funx."
+
 -- Requires json library
 local json = require ( "json" )
 local lfs = require ( "lfs" )
@@ -221,7 +224,7 @@ local function timePassed(msg)
 	local t = t2 - lastTimePassed
 	lastTimePassed = t2
 	msg = msg or ""
-	print ("scripts.funx.timePassed: ", floor(t) .. "ms", msg) --, "Total:", floor(t2-firstTime))
+	print ("funx.timePassed: ", floor(t) .. "ms", msg) --, "Total:", floor(t2-firstTime))
 	io.flush( )
 end
 
@@ -246,8 +249,11 @@ end
 
 
 -----------------
+-- Traceback
+-- Writes a call stack, showing what called the current code.
+-- Hopefully.
 local function traceback ()
-	print ("scripts.funx.TRACEBACK:")
+	print ("FUNX.TRACEBACK:")
 	local level = 1
 	while true do
 		local info = debug.getinfo(level, "Sl")
@@ -403,7 +409,7 @@ end
 local function substitutions (s, t, escapeTheKeys)
 
 	if (not s or not t or t=={}) then
-		--print ("scripts.funx.substitutions: No Values passed!")
+		--print ("funx.substitutions: No Values passed!")
 		return s
 	end
 
@@ -433,7 +439,7 @@ end
 -- Returns the string with the fields filled in.
 local function OLD_substitutionsSLOWER (s, t)
 	if (not s or not t or t=={}) then
-		--print ("scripts.funx.substitutions: No Values passed!")
+		--print ("funx.substitutions: No Values passed!")
 		return s
 	end
 	--local r = gfind(s,"%b{}")
@@ -1490,6 +1496,24 @@ end
 
 
 --------------
+--- Given an array of values, e.g. {"a", "b", "c" }
+-- convert to an array of key = true, so we can very quickly
+-- ask whether  value is in the array.
+-- IF we pass anything other than a table, return what was passed.
+local function tableConvertValuesToKeys(t)
+	if ( "table" == type(t) ) then
+		local t2 = {}
+		for k,v in pairs (t) do
+			t2[v] = true
+		end
+		return t2
+	else
+		return t
+	end
+end
+
+
+--------------
 --- Check that a key in table 1 exists in table 2.
 -- Useful for making sure the a setting value in the user settings is correctly named.
 -- example: keysExistInTable(usersettings,settings)
@@ -1626,7 +1650,7 @@ end
 -------------------------------------------------
 local function dimScreen(transitionTime, color, scaling, onTouch)
 
-	transitionTime = transitionTime or 300
+	transitionTime = tonumber(transitionTime or 300)
 	color = color or { 0.75 * OPAQUE }
 	local opacity = applyPercent(color[4],OPAQUE) or (0.75 * OPAQUE)
 	scaling = scaling or 1
@@ -2619,15 +2643,20 @@ end
 -------------------------------------------------
 -- loadingSpinner
 -- Show a loading spinner graphic
+
+-- *** THIS REQUIRES GRAPHICS IN THE "funx" DIRECTORY! ***
+-- If these graphics are missing, well, it will break.
+
 -- Params is a table:
--- handle = a timer reference. If set, then this MUST be a command to cancel the timer and spinner.
--- delay = time to wait before showing message. If our loading happens fast enough, we don't need
+-- @param sheet [string] The path to a sprite sheet for the spinner
+-- @param delay [int] Time to wait before showing message. If our loading happens fast enough, we don't need
+-- @param handle [table] Timer reference. If this value is set, then the spinner will be cancelled!
 -- the message to show.
 -- Examples of the table:
 -- { handle = mytimerhandle }
 -- { message="message", delay=1000 }
 --[[
-	local p = { message="Loading", delay=1000}
+	local p = { sheet = message="Loading", delay=1000}
 	local myTimerHandle = spinner(p)
 	...
 	local p = { handle = myTimerHandle }
@@ -2638,78 +2667,60 @@ local function spinner(p)
 	p = p or {}
 
 	local delay = p.delay or 500
-	local message = p.message or "Loading..."
-
-	local r = display.newGroup()
-
-	local function showMessage(event)
-		--local message = event.source.params.message
-		print ("Message",message)
-		if (message) then
-			tellUser(message)
-		end
-		native.setActivityIndicator( true );
-
-	end
 
 
-	local function showSpinner()
-		print ("SHOW SPINNER")
-		Runtime:removeEventListener( "enterFrame", showSpinner )
-		r.isVisible = true
-	end
-
-	local function hideSpinner()
-		print ("HIDE SPINNER")
-		Runtime:removeEventListener( "enterFrame", hideSpinner )
-		--r.isVisible = false
-	end
-
-
+	--------------------------spinnerSprite
+	-- Show spinner
 	if (not p.handler) then
+
+		local spinnerSprite
+
+		local sheetInfo = require( dotPathToFunxFolder .. "spinner")
+		local myImageSheet = graphics.newImageSheet( pathToFunxFolder.."spinner.png", sheetInfo:getSheet() )
+		local spinnerSprite = display.newSprite( myImageSheet , sheetInfo.sequenceData )
+	
+		-- Put in screen center
+		spinnerSprite.x = display.contentCenterX
+		spinnerSprite.y = display.contentCenterY
+	
+		-- I like this size reduction
+		spinnerSprite:scale( 0.5, 0.5 )
+		
+		-- Hide the spinner until called
+		spinnerSprite.isVisible = false
+
+			local function showSpinner()
+				spinnerSprite.isVisible = true
+				spinnerSprite:play()
+				
+				if (p.message) then
+					tellUser(p.message)
+				end
+					
+			end
+	
+
 		--print ("start timer")
-		print ("spinner started at",os.time(),"seconds")
-		local t = timer.performWithDelay( 300, function() print ("Timer!");showMessage(message); end )
+		--print ("spinner started at",os.time(),"seconds")
+		local t = timer.performWithDelay( delay, showSpinner )
 		t.starttime = os.time()
 
-		rr = display.newRect(0,0,100,100)
-		rr.x = midscreenX
-		rr.y = midscreenY
-		rr:setFillColor (255,0,0)
-		r:insert(rr)
-
-		t.recto = r
-
-		Runtime:addEventListener( "enterFrame", showSpinner );
+		t._spinnerObject = spinnerSprite
 
 		return t
 	else
-		--print ("Spinner canceled!")
-		print ("spinner cancelled at",os.time(),"seconds after ",os.time()-p.handler.starttime,"seconds.")
+	--------------------------
+	-- Hide spinner
 
-		p.handler.recto:removeSelf()
-		p.handler.recto = nil
-
-		Runtime:addEventListener( "enterFrame", hideSpinner );
-
+--print ("Spinner canceled!")
+--print ("spinner cancelled at",os.time(),"seconds after ",os.time()-p.handler.starttime,"seconds.")
 		timer.cancel(p.handler)
-
-		native.setActivityIndicator( false );
-
+		p.handler._spinnerObject:pause()
+		p.handler._spinnerObject:removeSelf()
+		p.handler._spinnerObject = nil
 	end
 end
 
-local rr = display.newGroup()
-local function showSpinner()
-		rr = display.newRect(0,0,100,100)
-		rr.x = midscreenX
-		rr.y = midscreenY
-		rr:setFillColor (255,0,0)
-end
-
-local function hideSpinner()
-		rr:removeSelf()
-end
 
 
 local function activityIndicator( mode )
@@ -3483,6 +3494,7 @@ local function referenceAdjustedXY (obj, x, y, newReferencePoint, scale, shadowO
 
 	if (obj and newReferencePoint) then
 		scale = scale or 1
+		shadowOffset = shadowOffset or 0
 		local w = obj.width
 		local h = obj.height
 
@@ -3787,10 +3799,24 @@ local function convertAnchorToReferencePointName (obj)
 end
 
 
+
+-------------------------------------------------------
+-- Reanchor to new point
+-- This version of reanchoring adjusts the x,y of an object for a new anchor point, using
+-- anchorX and anchorY
+local function reanchor(obj, ax, ay)
+	local dx, dy = obj.anchorX - ax, obj.anchorY - ay
+	local newX = obj.x - (dx * obj.width)
+	local newY = obj.y - (dy * obj.height)
+	obj.anchorX, obj.anchorY = ax, ay
+	obj.x = newX
+	obj.y = newY
+end
+
+
 -- Keep an object in the same place on screen while changing its anchor point.
 -- This is useful if an object is positioned Top Left (0,0), then we want to change the
 -- anchor point but not change the objects position on screen.
--- *** This depends on 
 local function reanchorToCenter (obj, a, x, y)
 	
 	if not a then return x,y; end
@@ -4102,82 +4128,75 @@ local function strokeGroupObject(obj,params)
 	params.matte = params.matte or 0
 
 	-- The frame
-	local f, temp
+	local temp
+	
+	-- FRAME
+	local f = display.newGroup()
+	--f.anchorChildren = true
 
 	params.style = lower(params.style)
 	if ( params.style == "solid") then
 
-		temp = obj.anchorChildren
-		obj.anchorChildren = true
-		f = display.newRect(0,0, obj.contentWidth + params.stroke + params.matte, obj.contentHeight + params.stroke + params.matte)
-		obj:insert(f)
-		f:toBack()
-		obj.anchorChildren = temp
 
-		f.strokeWidth = params.stroke or 0
-		f:setStrokeColor(color[1], color[2], color[3], color[4])
+		local fr = display.newRect(f, 0,0, w + params.stroke, h + params.stroke)
+		fr.strokeWidth = params.stroke or 0
+		fr:setStrokeColor(color[1], color[2], color[3], color[4])
 		if (mattecolor) then
-			f:setFillColor(mattecolor[1], mattecolor[2], mattecolor[3], mattecolor[4])
+			fr:setFillColor(mattecolor[1], mattecolor[2], mattecolor[3], mattecolor[4])
 		end
-		if (params.tintColor) then
-			local outerObj = framingObject(f, 0, tintColor, 0, "0,0,0,0")	
-			obj:insert(outerObj)
-		end
+		
 
 	elseif (params.style == "thick-thin") then
 		
-		f = display.newGroup()
-		f.anchorChildren = true
-		
-		temp = obj.anchorChildren
-		obj.anchorChildren = true
-		local innerFrame = display.newRect(f, 0,0, obj.contentWidth + params.stroke + params.matte, obj.contentHeight + params.stroke + params.matte)
-		obj:insert(f)
-		f:toBack()
-		obj.anchorChildren = temp
-
 		local sw = params.stroke or 0
-		local innerW = floor(sw * 0.25) or 1
-		local outerW = floor(sw * 0.5) or 1
+		local innerW = floor(sw * 0.5) or 1
+		local outerW = floor(sw * 0.25) or 1
 		local padding = (sw-(innerW + outerW)) or 1
 
+		local innerFrame = display.newRect(f, 0,0, w + innerW - 1, h + innerW - 1 )
 		innerFrame.strokeWidth = innerW
 		innerFrame:setStrokeColor(color[1], color[2], color[3], color[4])
 		if (mattecolor) then
 			innerFrame:setFillColor(mattecolor[1], mattecolor[2], mattecolor[3], mattecolor[4])
 		end
 
-		local outerObj = framingObject(f, padding, tintColor, outerW, color)	
-		f:insert(outerObj)
-		
---		obj:insert(o);
---		outerObj.x = 0
---		outerObj.y = 0
---		o.x = 0
---		o.y = 0
+		local outerOffset = innerW + padding + outerW/2
+		local outerFrame = display.newRect(f, 0,0, w - 1 + 2*outerOffset, h - 1 + 2*outerOffset)
+		outerFrame.strokeWidth = outerW
+		outerFrame:setStrokeColor(color[1], color[2], color[3], color[4])
+		outerFrame:setFillColor(255)
+		outerFrame:toBack()
 		
 	elseif (params.style == "thin-thick") then
 		local sw = params.stroke or 0
-		local innerW = floor(sw * 0.5) or 1
-		local outerW = floor(sw * 0.25) or 1
+		local innerW = floor(sw * 0.25) or 1
+		local outerW = floor(sw * 0.5) or 1
 		local padding = (sw-(innerW + outerW)) or 1
---print (params.stroke, innerW,outerW,padding)
 
-		f.strokeWidth = innerW
-		f:setStrokeColor(color[1], color[2], color[3], color[4])
+		local innerFrame = display.newRect(f, 0,0, w + innerW, h + innerW )
+		innerFrame.strokeWidth = innerW
+		innerFrame:setStrokeColor(color[1], color[2], color[3], color[4])
 		if (mattecolor) then
-			f:setFillColor(mattecolor[1], mattecolor[2], mattecolor[3], mattecolor[4])
+			innerFrame:setFillColor(mattecolor[1], mattecolor[2], mattecolor[3], mattecolor[4])
 		end
 
-		local outerObj = framingObject(f, padding, tintColor, outerW, color)
-		obj:insert(outerObj)
-		
---		obj:insert(o);
---		outerObj.x = 0
---		outerObj.y = 0
---		o.x = 0
---		o.y = 0
+		local outerOffset = innerW + padding + outerW/2
+		local outerFrame = display.newRect(f, 0,0, w + 2*outerOffset, h + 2*outerOffset)
+		outerFrame.strokeWidth = outerW
+		outerFrame:setStrokeColor(color[1], color[2], color[3], color[4])
+		outerFrame:setFillColor(255)
+		outerFrame:toBack()
 	end
+	
+	temp = obj.anchorChildren
+	obj.anchorChildren = true
+
+	obj:insert(f)
+
+	f:toBack()	
+	obj.anchorChildren = temp
+	
+
 	return f
 
 end
@@ -4979,7 +4998,6 @@ FUNX.hasFieldCodes = hasFieldCodes
 FUNX.hasFieldCodesSingle = hasFieldCodesSingle
 FUNX.hasNetConnection = hasNetConnection
 FUNX.hideObject = hideObject
-FUNX.hideSpinner = hideSpinner
 FUNX.indexOfSystemDirectory = indexOfSystemDirectory
 FUNX.initSystemEventHandler = initSystemEventHandler
 FUNX.inTable = inTable
@@ -5015,6 +5033,7 @@ FUNX.positionObjectAroundCenter = positionObjectAroundCenter
 FUNX.positionObjectWithReferencePoint = positionObjectWithReferencePoint
 FUNX.setAnchorFromReferencePoint = setAnchorFromReferencePoint
 FUNX.convertAnchorToReferencePointName = convertAnchorToReferencePointName
+FUNX.reanchor = reanchor
 FUNX.reanchorToCenter = reanchorToCenter
 FUNX.printFuncName = printFuncName
 FUNX.ratioToFitMargins  = ratioToFitMargins 
@@ -5039,7 +5058,6 @@ FUNX.setCase = setCase
 FUNX.setFillColorFromString = setFillColorFromString
 --FUNX.setTextStyles  = setTextStyles 
 FUNX.showContentToLocal = showContentToLocal
-FUNX.showSpinner = showSpinner
 FUNX.showTestBox  = showTestBox 
 FUNX.showTestLine  = showTestLine 
 FUNX.shrinkAway  = shrinkAway 
@@ -5055,6 +5073,7 @@ FUNX.flattenTable  = flattenTable
 FUNX.substitutions  = substitutions 
 FUNX.table_multi_sort = table_multi_sort
 FUNX.table_sort = table_sort
+FUNX.tableConvertValuesToKeys = tableConvertValuesToKeys
 FUNX.tableCopy = tableCopy
 FUNX.tableIsEmpty = tableIsEmpty
 FUNX.tablelength  = tablelength 
