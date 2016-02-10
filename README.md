@@ -59,9 +59,11 @@ defaultStyle : [sring] The name of the the default style (from textstyles.txt) f
 
 handler : [function] A function that will accept a 'tap' event on a hyperlink.
 
-hyperlinkFillColor : [string] The fill of a box surrounding a hyperlink.An RGBa color in a string, like this: "200,120,255,100"
+hyperlinkFillColor : [string] The fill of a box surrounding a hyperlink.An RGBa color in a string, like this: "200,120,255,100". Note, this value must be set in your code...there is no textstyle for it.
 
 hyperlinkTextColor : [string] The color of text of hyperlink. An RGBa color in a string, like this: "200,120,255,100"
+
+You can also set the hyperlink text color by creating an "a" tag in the textstyles.txt document. Hyperlinks use the HTML "a" tag (like a "p" or "ol"), so that style will be applied.
 
 
 ### Unused or In Development

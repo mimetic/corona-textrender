@@ -50,6 +50,7 @@ local midscreenY = screenH*(0.5)
 
 -- functions
 local floor = math.floor
+local ceil = math.ceil
 local min = math.min
 local max = math.max
 local random = math.random
@@ -73,10 +74,74 @@ local TRANSPARENT = 0
 
 
 
--- -------------------------------------------------------------
--- GRAPHICS 2.0 POSITIONING
--- ------------------------------------------------------------
 
+
+-- -------------------------------------------------------------
+-- HARDWARE SETTINGS
+-- This exposes the system hardware settings to FUNX.
+-- Easy to find out what kind of device, for example.
+-- -------------------------------------------------------------
+hardwareInfo = {}
+
+hardwareInfo.isApple = false
+hardwareInfo.isAndroid = false
+hardwareInfo.isGoogle = false
+hardwareInfo.isKindleFire = false
+hardwareInfo.isNook = false
+hardwareInfo.is_iPad = false
+hardwareInfo.isTall = false
+hardwareInfo.isSimulator = false
+
+local model = system.getInfo("model")
+
+-- Are we on the simulator?
+
+if "simulator" == system.getInfo("environment") then
+	 hardwareInfo.isSimulator = true
+end
+
+-- lets see if we are a tall device
+
+hardwareInfo.isTall = false
+if (display.pixelHeight/display.pixelWidth) > 1.5 then
+	 hardwareInfo.isTall = true
+end
+
+-- first, look to see if we are on some Apple platform.
+-- All models start with iP, so we can check that.
+
+if string.sub(model,1,2) == "iP" then 
+	  -- We are an iOS device of some sort
+	  hardwareInfo.isApple = true
+
+	  if string.sub(model, 1, 4) == "iPad" then
+			hardwareInfo.is_iPad = true
+	  end
+else
+	 -- Not Apple, then we must be one of the Android devices
+	 hardwareInfo.isAndroid = true
+
+	 -- lets assume we are Google for the moment
+	 hardwareInfo.isGoogle = true
+
+	 -- All the Kindles start with K, though Corona SDK before build 976's Kindle Fire 9 returned "WFJWI" instead of "KFJWI"
+
+	 if model == "Kindle Fire" or model == "WFJWI" or string.sub(model,1,2) == "KF" then
+		  hardwareInfo.isKindleFire = true
+		  hardwareInfo.isGoogle = false
+	 end
+
+	 -- Are we a nook?
+
+	 if string.sub(model,1,4) == "Nook" or string.sub(model,1,4) == "BNRV" then
+		  hardwareInfo.isNook = true
+		  hardwareInfo.isGoogle = false
+	 end
+end
+
+
+
+-- -------------------------------------------------------------
 -- Problem is, if this goes to quickly, you'll still get non-random numbers,
 -- and I've found some lines execute so fast the 
 local function uniqueID()
@@ -93,6 +158,9 @@ local function toZero(o)
 end
 
 
+-- -------------------------------------------------------------
+-- GRAPHICS 2.0 POSITIONING
+-- ------------------------------------------------------------
 
 local function anchor(obj, pos)
 	if (not obj) then return; end
@@ -1305,6 +1373,11 @@ local function loadImageFile(filename, wildcardPath, whichSystemDirectory, showT
 	local scalesuffix = ""
 	local otherFound = false
 
+	if (_DEVELOPING) then
+		showTraceOnFailure = true
+	end
+
+
 	if (filename) then
 		wildcardPath = wildcardPath or "_user"
 
@@ -1326,32 +1399,38 @@ local function loadImageFile(filename, wildcardPath, whichSystemDirectory, showT
 		-- default to system for files, e.g. _ui/mygraphic.jpg
 		whichSystemDirectory = whichSystemDirectory or system.ResourceDirectory
 
+
+		-- ANDROID FIX
+		-- To allow images inside folders, we can add ".txt" to the image
+		-- frg 2016-01-23
+		--     added check for existence of file and then adding .txt to extension
+		--     to try again. On Android devices, it is not possible to read .png or .jpg
+		--     files, but appending .txt will work.
+		if (hardwareInfo.isAndroid) then
+			if ( not fileExists(filename, whichSystemDirectory)) then
+				filename = filename .. ".txt"
+			end
+		end
+
 		if (fileExists(filename, whichSystemDirectory)) then
 			local image
 
-			-- My method for loading images
-			if (otherFound) then
-			--local path = system.pathForFile( filename, whichSystemDirectory )
-				image = display.newImage(filename, whichSystemDirectory, true)
-				image:scale(scaleFraction, scaleFraction)
-	--print ("loadImageFile: Using my method:", filename)
+			-- Corona newImageRect version for loading images
+			-- Check for a scaled file before loading it
+			local f,s = getScaledFilename(filename, whichSystemDirectory)
+--timePassed("loadImageFile start loading..."..filename)
+			-- If scale comes back ~= 1 then there is a scaled version
+			-- and there is need of one.
+			if (s ~= 1) then
+				local w,h = getImageSize(filename,whichSystemDirectory)
+				image = display.newImageRect(filename, whichSystemDirectory, w, h)
+--timePassed("loadImageFile, Loaded using newImageRect, C1:"..filename)
 			else
-				-- Corona newImageRect version for loading images
-				-- Check for a scaled file before loading it
-				local f,s = getScaledFilename(filename, whichSystemDirectory)
-	--timePassed("loadImageFile start loading..."..filename)
-				-- If scale comes back ~= 1 then there is a scaled version
-				-- and there is need of one.
-				if (s ~= 1) then
-					local w,h = getImageSize(filename,whichSystemDirectory)
-					image = display.newImageRect(filename, whichSystemDirectory, w, h)
-	--timePassed("loadImageFile, Loaded using newImageRect, C1:"..filename)
-				else
-					image = display.newImage(filename, whichSystemDirectory, true)
-	--timePassed("loadImageFile, loaded using newImage, C2:"..filename)
-				end
-	--print ("loadImageFile: Using Corona method:", filename)
+				image = display.newImage(filename, whichSystemDirectory, true)
+--timePassed("loadImageFile, loaded using newImage, C2:"..filename)
 			end
+--print ("loadImageFile: Using Corona method:", filename)
+
 			anchorZero(image, "Center")
 
 			return image, scaleFraction
@@ -1862,6 +1941,208 @@ end
 
 
 -------------------------------------------------
+-- POPUP: popup a display group
+-- We have white and black popups. Default is white.
+-- If the first param is a table, then we assume all params are in that table, IN ORDER!!!,
+-- If alpha > 0, then ignore a call to show it.
+--[[
+	@param	[table] t = table of params, below:
+		@param	[display object] table.object
+		@param	[string] table.backgroundColor
+		@param	[string] table.showBackground
+		@param	[string] table.bkgdAlpha
+		@param	[string] table.transitionTime
+		@param	[string] table.filename
+--]]
+-------------------------------------------------
+local function popupDisplayGroup(t, frontstage)
+		
+	local obj = t.object
+	
+	if (not obj or (obj.isVisible == true and obj.alpha > 0) ) then
+		return false
+	end
+	
+	--[[
+	local	backgroundColor = trim(t.backgroundColor)
+	local	showBackground = t.showBackground
+	local	bkgdAlpha = applyPercent(bkgdAlpha or 0.95,1)
+	local backgroundFile = trim(t.backgroundFile )
+	--]]
+	
+	local	transitionTime = tonumber(t.time) or 300
+	local	doDimScreen = t.doDimScreen
+	local	cancelOnTouch = t.cancelOnTouch
+
+	local closing = false
+
+
+
+			local function moveToFrontstage(obj)
+	
+				if (not obj.onFrontstage) then
+					---------------
+					-- Move the object to the front stage, above buttons and everything
+
+					-- Save the x,y from whence we pluck the object					
+					obj.localX = obj.x
+					obj.localY = obj.y
+	
+					-- Save the parent group reference
+					obj._parentGroup = obj.parent
+
+					frontstage:insert(obj)
+					if (obj.dimBackgroundOnZoom and frontstage.numChildren < 3) then
+						frontstage.background.alpha = 0
+						transition.to(frontstage.background, { time=obj.zoomTransitionTime, alpha=frontstage.background._alpha } )
+						
+					end
+
+					obj:toFront()
+					obj.onFrontstage = true
+				end
+			end
+			
+			local function restoreFromFrontstage(obj)
+				---------------
+				-- Move object from the frontstage back to the group it came from.
+				-- Do this first, so we can restore the picture to its proper
+				-- zLayer in the set of pictures!
+				if (obj.onFrontstage) then
+					--local lx, ly = obj:localToContent(obj.x, obj.y)
+					local lx, ly = obj.localX, obj.localY
+					obj._parentGroup:insert(obj)
+					--obj:setReferencePoint(display[obj.originalReferencePoint .. "ReferencePoint"])
+					anchor(obj, obj.originalReferencePoint)
+					obj.x = lx
+					obj.y = ly
+
+					-- Get rid of this reference just in case, to avoid memory leaks
+					obj._parentGroup = nil
+					
+					obj.onFrontstage = false
+
+				end
+				
+				-- Restore objects to their proper layers
+				if (obj.layer == "top" ) then
+					obj:toFront()
+				elseif (obj.layer == "bottom" ) then
+					obj:toBack()
+				elseif (obj.layer and obj.restoreLayersOnZoomOut) then
+					zSort(obj.parent)
+				end
+			end
+	
+	
+			local function cleanup()
+				if (doDimScreen) then
+					undimScreen(obj._dim)
+				end
+				
+				if (frontstage) then
+					restoreFromFrontstage(obj)
+				end				
+			end
+
+			local function closeMe(event)
+				if (not closing and obj ~= nil) then
+					-- remove the close button
+					if (obj._popupCloseButton) then
+						obj._popupCloseButton:removeSelf()
+						obj._popupCloseButton = nil
+					end
+					transition.to (obj, {alpha=0, time=transitionTime, onComplete=cleanup} )
+					closing = true
+				end
+				return true
+			end
+			
+			
+			
+	
+	-- w/h of the popup	
+	local w,h = obj.contentWidth, obj.contentHeight
+
+			
+	--[[
+	-- BACKGROUND
+	-- cover all rect, darken background
+	local bkgdrect = display.newRect(0,0,screenW,screenH)
+	obj:insert(bkgdrect)
+	bkgdrect:setFillColor( 55, 55, 55, 190 )
+	
+	-- background graphic for popup
+	-- If the default fails, try using the value as a filename
+	local bkgd
+	if (backgroundFile) then
+		bkgd = display.newImage( backgroundFile, true)
+	elseif (backgroundColor) then
+		bkgd = display.newRect(0,0, obj.contentWidth, obj.contentHeight)
+		bkgd:setFillColor( stringToColorTable(backgroundColor))
+	end
+	
+	local bkgdWidth, bkgdHeight
+	if (bkgd) then
+		checkScale(bkgd)
+		obj:insert (bkgd)
+		anchor(bkgd, "Center")
+		bkgd.x = midscreenX
+		bkgd.y = midscreenY
+		bkgd.alpha = bkgdAlpha
+		bkgdWidth = bkgd.width
+		bkgdHeight = bkgd.height
+		w,h = bkgd.contentWidth, bkgd.contentHeight
+	end
+	--]]
+	
+	local closeButton = widget.newButton{
+		defaultFile = "_ui/button-cancel-round.png",
+		overFile = "_ui/button-cancel-round-over.png",
+		onRelease = closeMe,
+	}
+	obj:insert(closeButton)
+	obj._popupCloseButton = closeButton
+	anchorZero(closeButton, "Center")
+	closeButton.x = (w) - closeButton.width/4
+	closeButton.y = closeButton.height/4
+	closeButton:toFront()
+
+	obj.alpha = 0
+	obj.isVisible = true
+	
+	--[[ 
+	-- Dimming requires moving to front stage, etc. No time for that now
+	
+	
+	if (doDimScreen) then
+		-- true means lock the background against touches
+		local c = "0,0,0,75%"
+		obj._dim = dimScreen(transitionTime, c, nil, true)
+	end
+	--]]
+	
+	if (frontstage) then
+		moveToFrontstage(obj)
+	end
+	
+
+	-- Capture touch events and do nothing.
+	if (cancelOnTouch) then
+		obj:addEventListener( "touch", closeMe )
+	else
+		obj:addEventListener( "touch", function() return true end )
+	end
+
+	transition.to (obj, {alpha=1, time=transitionTime } )
+
+end
+
+
+
+
+
+-------------------------------------------------
 -- POPUP: popup image with close button
 -- We have white and black popups. Default is white.
 -- If the first param is a table, then we assume all params are in that table, IN ORDER!!!,
@@ -1977,10 +2258,7 @@ end
 
 
 -------------------------------------------------
--- POPUP: popup image with close button
--- We have white and black popups. Default is white.
--- If the first param is a table, then we assume all params are in that table, IN ORDER!!!,
--- starting with filename, e.g. { "filename.jpg", "white", 1000, true}
+-- POPUP: popup web page
 -------------------------------------------------
 local function popupWebpage(targetURL, color, bkgdAlpha, transitionTime, netrequired, noNetMsg)
 	
@@ -2159,7 +2437,6 @@ end
 ------------------------------------------------------------------------
 
 local function buildShadow(w,h,sw,opacity)
-	local ceil = math.ceil
 	local shadow = display.newGroup()
 
 --addPosRect(shadow,false)
@@ -2322,20 +2599,26 @@ end
 
 ------------------------------------------------------------------------
 -- SHADOW - Filter Effects based using Graphics 2.0
--- Build a drop shadow
+-- Build a drop shadow by duplicating any object in a snapshot
+-- and blurring and coloring it.
 ------------------------------------------------------------------------
-
-
-local function buildShadowNew(w,h,sw,opacity)
-
+local function buildShadowObj(obj, sw, color, opacity)
+	
+	w = obj.contentWidth
+	h = obj.contentHeight
+	
 	sw = sw or 20
 	local shadow = display.newSnapshot( w + 2*sw, h + 2*sw )
 	
-	opacity = opacity or OPAQUE
-	opacity = applyPercent( opacity, OPAQUE)
-
 	-- Start with a solid rect
 	local srect = display.newRect(0,0,w + 1*sw,h + 1*sw)
+	
+	color = color or "0,0,0,100%"
+	local c = stringToColorTable(color)
+	if opacity then
+		c[4] = applyPercent(opacity,1)
+	end
+	
 	-- Alpha visually matches the graphic pieces. Probably we should use another graphic
 	srect:setFillColor( 0,0,0, opacity )
 	
@@ -3872,16 +4155,16 @@ local function buildPictureCorners (w,h, filenames, offsets)
 	local imageBR = display.newImage(g, filenames.BR)
 
 	anchor(imageTL, "TopLeft")
-	imageTL.x = 0 + offsets.TLx - w/2; imageTL.y = 0 + offsets.TLy - h/2;
+	imageTL.x = floor(0 + offsets.TLx - w/2); imageTL.y = floor(0 + offsets.TLy - h/2);
 
 	anchor(imageTR, "TopRight")
-	imageTR.x = w/2 + offsets.TRx; imageTR.y = -h/2 + offsets.TRy;
+	imageTR.x = ceil(w/2 + offsets.TRx); imageTR.y = floor(-h/2 + offsets.TRy);
 
 	anchor(imageBL, "BottomLeft")
-	imageBL.x = -w/2 + offsets.BLx; imageBL.y = h/2 + offsets.BLy;
+	imageBL.x = floor(-w/2 + offsets.BLx); imageBL.y = ceil(h/2 + offsets.BLy);
 
 	anchor(imageBR, "BottomRight")
-	imageBR.x = w/2 + offsets.BRx; imageBR.y = h/2 + offsets.BRy;
+	imageBR.x = ceil(w/2 + offsets.BRx); imageBR.y = ceil(h/2 + offsets.BRy);
 
 	return g
 end
@@ -4133,6 +4416,8 @@ local function strokeGroupObject(obj,params)
 	-- FRAME
 	local f = display.newGroup()
 	--f.anchorChildren = true
+	
+	local w,h = obj.contentWidth, obj.contentHeight
 
 	params.style = lower(params.style)
 	if ( params.style == "solid") then
@@ -4909,6 +5194,10 @@ function FUNX.flashObject(obj, t, a)
 end
 
 
+-- ====================================================================
+-- Tables of values
+-- ====================================================================
+FUNX.hardwareInfo = hardwareInfo
 
 -- ====================================================================
 -- Register new functions here
@@ -4949,7 +5238,7 @@ FUNX.autoWrappedText  = autoWrappedText
 FUNX.basename  = basename 
 FUNX.buildPictureCorners  = buildPictureCorners 
 FUNX.buildShadow = buildShadow
-FUNX.buildShadow1 = buildShadowNew
+--FUNX.buildShadowObj = buildShadowObj
 FUNX.buildTextDisplayObjectsFromTemplate  = buildTextDisplayObjectsFromTemplate 
 FUNX.callClean  = callClean 
 FUNX.canConnectWithServer = canConnectWithServer
@@ -5026,6 +5315,7 @@ FUNX.percent  = percent
 FUNX.percentOfScreenHeight  = percentOfScreenHeight 
 FUNX.percentOfScreenWidth  = percentOfScreenWidth 
 FUNX.popup = popup
+FUNX.popupDisplayGroup = popupDisplayGroup
 FUNX.popupWebpage = popupWebpage
 FUNX.positionByName = positionByName
 FUNX.positionObject = positionObject

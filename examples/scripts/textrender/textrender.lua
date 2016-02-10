@@ -48,8 +48,14 @@ DEALINGS IN THE SOFTWARE.
 ]]
 --display.setDrawMode( "wireframe", false )
 -- TESTING
-local testing = false
-local noCache = false
+-- Check the GLOBAL testing variable
+local testing = _TESTING
+local noCache = _NOCACHE
+
+
+if (testing) then
+	print ("**** WARNING: textrender: TESTING ON ****")
+end
 
 if (noCache) then
 	print ("**** WARNING: textrender: CACHING TURNED OFF FOR TESTING!!!! ****")
@@ -915,7 +921,9 @@ local function alignRenderedLines(lines, stats)
 		elseif (stats[i].textAlignment == "Center") then
 			lines[i].anchorX = 0.5
 			-- currentWidth compensates for margins			
-			local c = stats[i].leftIndent + stats[i].firstLineIndent + (stats[i].currentWidth)/2
+			--local c = stats[i].leftIndent + stats[i].firstLineIndent + (stats[i].currentWidth)/2
+			--local c = stats[i].firstLineIndent + (stats[i].currentWidth)/2
+			local c = stats[i].firstLineIndent + (stats[i].width)/2
 			lines[i].x = c
 		else
 			lines[i].x = stats[i].leftIndent + stats[i].firstLineIndent
@@ -1024,6 +1032,9 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 		settings.handler = text.handler
 		hyperlinkFillColor = text.hyperlinkFillColor or hyperlinkFillColor
 		hyperlinkTextColor = text.hyperlinkTextColor or hyperlinkTextColor
+		
+		sourceDirectory = text.sourceDirectory or false
+		sourcePath = text.sourcePath or false
 		
 		testing = testing or text.testing
 		noCache = noCache or text.noCache
@@ -1564,7 +1575,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 			-- Default to disc
 
 			-- bullet set to nothing!
-			if ( format['bullet'] == "" ) then
+			if ( format['bullet'] == "" or format['bullet'] == "none") then
 				settings.bullet = nil
 			elseif ( format['bullet'] == nil ) then
 			-- bullet not set, use default
@@ -1617,7 +1628,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 	-- with some fudge-factors.
 	local widthCorrection = 1
 	if (true) then
-		widthCorrection = 1.01--0.999
+		widthCorrection = 1.02--0.999
 	end
 
 
@@ -2867,15 +2878,6 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 							-- @param pos Add current spacing before or after this CR
 							local function CRLF( pos, tag)
 								
-								local testing = false
-								
-								if (testing) then
-									tag = tag or ""
-									local c = settings.color
-									settings.color = {.8,0,0,0.7}
-									local pmarker = renderParsedElement(1, "¶ "..tag, "", "")
-									settings.color = c
-								end
 								pos = pos or "After"
 								lineY = lineY + lineHeight + settings["space"..pos]
 								--print (tag.." : CRLF ("..pos..") before/after, lineheight",settings["spaceBefore"], settings["spaceAfter"], lineHeight)
@@ -2986,14 +2988,14 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 								b = entities.convert(b)
 							end
 							stacks.list[stacks.list.ptr] = { tag = tag, 
-										line = 1, 
+										line = 1,
+										counter = 0,
 										bullet = b, 
-										indent = settings.listIndent * (stacks.list.ptr - 1), 
+										indent = settings.listIndent * (stacks.list.ptr - 1),
 										leftIndent = settings.leftIndent or 0, 
 										rightIndent = settings.rightIndent or 0,
 										padding = convertValuesToPixels(attr.padding),
 										}
-
 						elseif  (tag == "li") then
 						-- ================================================
 						-- LI tag
@@ -3003,6 +3005,8 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 
 							-- ----------
 							-- Create the LI block
+
+							stacks.list[stacks.list.ptr].counter = stacks.list[stacks.list.ptr].counter + 1
 
 							-- Apply a 'value' attribute <li value="10" ...
 							if (attr.value) then
@@ -3095,6 +3099,10 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 						x = 0
 						if (attr.src ) then
 							attr.directory = attr.directory or "ResourceDirectory"
+							-- replace "*" wildcard with location of the book, if provided
+							if (sourcePath) then
+								attr.src = funx.replaceWildcard(attr.src, sourcePath)
+							end
 							if (funx.fileExists( attr.src,  system[attr.directory] )) then
 								local image = funx.loadImageFile( attr.src, nil, system[attr.directory] )
 								anchor(image, "TopLeft")
@@ -3117,15 +3125,43 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 					-- Block-level elements start on a new line (HTML spec's)
 					-- If we treat <li> as a block, then we can't treat a nested <ul> or <ol> as a block,
 					-- too, or we get extra spaces.
+					-- Don't add space before the first element, either.
+					-- List Tags -> ul, ol
+					-- Add space before a ul/ol if it is not embedded in another list
+					-- Add space before li if not the first one in a list.
+					
 					if ( isBlockTag[tag] ) then
---						print("----------------------------")
-
-						if ( not (isListTag[tag] and stacks.list.ptr > 1)) then
-							--print ("PRE LOOP) Current tag; lineHeight; Space before:",tag, lineHeight, settings.spaceBefore)
+--print ("BLOCK TAG",tag, stacks.list.ptr)
+						if (isListTag[tag]) then 
+							-- Don't add space before sub-lists.
+							if ( not (stacks.list.ptr > 1 ) ) then	
+								-- List Tags (ol/ul)
+								if (isListTag[tag]) then
+--	print ("A YES",tag,"counter=",stacks.list[stacks.list.ptr].counter)
+									CRLF( "Before", tag )
+								
+								-- other block tags
+								elseif ( stacks.list[stacks.list.ptr] and stacks.list[stacks.list.ptr].counter > 1) then
+--print ("B YES",tag,"counter=",stacks.list[stacks.list.ptr].counter)
+									CRLF( "Before", tag )
+								end
+							end
+						elseif tag == 'li' then
+							if ( stacks.list[stacks.list.ptr] and stacks.list[stacks.list.ptr].counter > 1) then
+--print ("C YES",tag,"counter=",stacks.list[stacks.list.ptr].counter)
+									CRLF( "Before", tag )
+							end
+						else
+						-- Not list tag
+--print ("Not a sublist:",tag, stacks.list.ptr)
 							CRLF( "Before", tag )
+--print ("D YES",tag )
 						end
-	
+--print ("D NO",tag, isListTag[tag], stacks.list.ptr, (not isListTag[tag]) and (stacks.list.ptr <= 1))
+--print (not isListTag[tag], stacks.list.ptr <= 1)
+
 					end
+					
 					
 					
 					-- -------------------------------------------------------
