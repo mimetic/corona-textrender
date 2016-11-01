@@ -147,6 +147,12 @@ local function hyperlinkdemo( e )
 	timer.performWithDelay( 3000, removeMsgBlock )
 end
 
+local function hyperlinkdemo2( e )
+	local targetURL = "https://www.google.com"
+	funx.popupWebpage(targetURL)
+end
+
+
 --===================================================================--
 -- Text Field
 local params = {
@@ -179,7 +185,7 @@ local params = {
 	
 	-- The handler is the function executed when a hyperlink is tapped.
 	-- It will get the HREF from the <a> tag.
-	handler = hyperlinkdemo,
+	handler = hyperlinkdemo2,
 	
 	-- cacheDir is empty so we do not use caching with files, instead we use the SQLite database
 	-- which is faster.

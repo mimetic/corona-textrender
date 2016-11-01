@@ -1,6 +1,6 @@
 -- textrender.lua
 --
--- Version 3.1.1
+-- Version 3.1.2
 --
 -- Copyright (C) 2015 David I. Gross. All Rights Reserved.
 --
@@ -963,12 +963,6 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 	local descent = 0
 	local ascent = 0
 	
-	if (testing) then
-		print ("autoWrappedText: testing flag is true.")
-		print ("----------")
-		--print (text.text)
-		--print ("----------")
-	end
 
 	-- table for useful settings. We need fewer upvalues, and this is a way to do that
 	local settings = {}
@@ -1054,6 +1048,13 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 	end
 	
 	
+	if (testing) then
+		print ("autoWrappedText: testing flag is true.")
+		print ("----------")
+		--print (text.text)
+		--print ("----------")
+	end
+
 	-- Be sure text isn't nil
 	text = text or ""
 
@@ -1190,7 +1191,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 	 -- used to restore from bold, bold-italic, etc. since some names aren't clear, e.g. FoozleSemiBold might be the only bold for a font
 	settings.fontvariation = ""
 	settings.size = tonumber(size) or 12
-	settings.color = color or {0,0,0,255}
+	settings.color = color or {0,0,0, OPAQUE}
 	settings.width = width
 	settings.opacity = applyPercent(opacity, OPAQUE) or OPAQUE
 	settings.targetDeviceScreenSize = targetDeviceScreenSize or screenW..","..screenH
@@ -1245,7 +1246,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 			params.size = settings.size
 			params.minLineCharCount = settings.minLineCharCount
 			params.lineHeight = lineHeight
-			params.color = settings.color
+			params.color = settings.color or {0,0,0, OPAQUE}
 			params.width = settings.width
 			params.opacity = settings.opacity
 			-- case (uppercase/lowercase)
@@ -1616,7 +1617,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 		font = settings.font,
 		size = settings.size,
 		lineHeight = lineHeight,
-		color = settings.color,
+		color = settings.color or {0,0,0, OPAQUE},
 		width = settings.width,
 		opacity = settings.opacity,
 	}
@@ -1799,7 +1800,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 				local renderXMLvars = {}
 				local renderXMLresult = display.newGroup()
 				-- Need this positioniong rect so lines can be right/center justified inside of the result group
-				funx.addPosRect(renderXMLresult, testing, {0,250,0})
+				funx.addPosRect(renderXMLresult, testing, {50,255,50,240})
 
 				if (not settings.width) then print ("WARNING: textwrap: renderXML: The width is not set! This shouldn't happen."); end
 

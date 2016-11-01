@@ -207,7 +207,7 @@ end
 -- @param vis [boolean] True = visible, False = hidden
 -- @param c [table]	RGBa color table {r,g,b,a}
 local function addPosRect(g, vis, c )
-	local r = display.newRect(g, 0,0,10,10)
+	local r = display.newRect(g, 0,0,1,1)
 	r.isVisible = vis
 	c = c or {250,0,0,100}
 	r:setFillColor(unpack(c))
@@ -285,14 +285,13 @@ end
 -- ------------------------------------------------------------
 -- DEBUGGING Timer
 -- ------------------------------------------------------------
-local firstTime = system.getTimer()
 local lastTimePassed = system.getTimer()
 local function timePassed(msg)
 	local t2 = system.getTimer()
 	local t = t2 - lastTimePassed
 	lastTimePassed = t2
 	msg = msg or ""
-	print ("funx.timePassed: ", floor(t) .. "ms", msg) --, "Total:", floor(t2-firstTime))
+	print ("funx.timePassed: ", floor(t) .. "ms", msg)
 	io.flush( )
 end
 
@@ -651,7 +650,12 @@ local function dumptable(_class, no_func, depth, maxDepth, filter)
 		end
 
 	if (not _class) then
-		print ("dumptable: not a class.");
+		if (_class == nil) then
+			print ("dumptable: the table is NIL");
+		else
+			print ("dumptable: type = " .. type(_class));
+			print (tostring(_class))
+		end
 		return;
 	end
 	
@@ -701,6 +705,8 @@ local function dumptable(_class, no_func, depth, maxDepth, filter)
 				end
 			end
 		end
+	else
+		print ("type = "..type(_class))
 	end
 	print (str.."}");
 end
@@ -844,7 +850,7 @@ local function tableMerge(t1, t2)
 end
 
 
-
+-- My Split Function
 local function split(str, pat, doTrim)
 	pat = pat or ","
 	if (not str) then
@@ -852,7 +858,7 @@ local function split(str, pat, doTrim)
 	end
 	str = tostring(str)
 	local t = {}
-	local fpat = "(.-)" .. pat
+	local fpat = "(.-)" .. tostring(pat)
 	local last_end = 1
 	local s, e, cap = str:find(fpat, 1)
 	while s do
@@ -889,10 +895,20 @@ end
 -------------------------------------------------
 local function scaleFactorForRetina()
 	local deviceWidth = ( display.contentWidth - (display.screenOriginX * 2) ) / display.contentScaleX
-	local scaleFactor = floor( deviceWidth / display.contentWidth )
+	local scaleFactor = floor( deviceWidth / display.contentWidth)
 	return scaleFactor
 end
 
+-------------------------------------------------
+-- display.screenOriginX is not zero when the screen differs in ratio from the config.lua screen
+-- e.g. with an iPhone 6 vs. iPad
+local function scaleFactorForScreen()
+
+	local deviceWidth = ( display.contentWidth ) / display.contentScaleX
+	local scaleFactor = round( deviceWidth / display.contentWidth, 3 )
+
+	return scaleFactor
+end
 
 -------------------------------------------------
 -- CHECK IMAGE DIMENSION & SCALE ACCORDINGLY
@@ -1034,15 +1050,54 @@ local function percentOfScreenWidth (x,noRound)
 end
 
 --------------------------------------------------------
+-- Replace placeholder directory in path name with real value
+-- p : a single character placeholder, default is "*"
+-- v : the real value, e.g. "mypath"
+-- Any slashes must be in the original.
+-- Example:
+-- replaceWildcard ("*/images/pic.jpg", "mydir", "?")
+--------------------------------------------------------
+
+local function replaceWildcard(text, v, p)
+--print ("scripts.funx.replaceWildcard", text, v, p)
+	if (text and v) then
+		p = p or "*"
+		text = text:gsub("%"..p, v)
+		end
+	return text
+end
+
+--------------------------------------------------------
 -- File Exists
 -- default directory is system.ResourceDirectory
 -- not system.DocumentsDirectory
 --------------------------------------------------------
 
-local function fileExists(f,d)
-	if (f) then
-		d = d or system.ResourceDirectory
-		local filePath = system.pathForFile( f, d )
+local function fileExists(filename, whichSystemDirectory, wildcardPath)
+
+	if (filename) then
+
+		wildcardPath = wildcardPath or "_user"
+		-- If the filename starts with a wildcard, then replace it with the wildcardPath
+		local wc = substring(filename,1,1)
+		if (wc == "*" and wildcardPath) then
+			filename = replaceWildcard(filename, wildcardPath)
+
+			-- Files inside _user are system files, everything else with a wildcard is
+			-- a downloaded book.
+			if (not find(wildcardPath, "^_user") ) then
+			--if (wildcardPath ~= "_user") then
+				whichSystemDirectory = whichSystemDirectory or system.CachesDirectory
+			else
+				whichSystemDirectory = whichSystemDirectory or system.ResourceDirectory
+			end
+		end
+
+		-- default to system for files, e.g. _ui/mygraphic.jpg
+		whichSystemDirectory = whichSystemDirectory or system.ResourceDirectory
+
+		whichSystemDirectory = whichSystemDirectory or system.ResourceDirectory
+		local filePath = system.pathForFile( filename, whichSystemDirectory )
 		local exists = false
 		-- Determine if file exists
 		if (filePath ~= nil) then
@@ -1158,7 +1213,9 @@ local function loadTableFromFile(filePath, s)
 	end
 end
 
-local function saveTable(t, filename, path)
+-- 
+-- @param doMerge = boolean	If true, then merge table t into the existing data instead of overwriting the data.
+local function saveTable(t, filename, path, doMerge)
 	if (not t or not filename) then
 		return true
 	end
@@ -1166,8 +1223,14 @@ local function saveTable(t, filename, path)
 	path = path or system.DocumentsDirectory
 	--print ("scripts.funx.saveTable: save to "..filename)
 
+	if (doMerge) then
+		t = tableMerge( loadTable(filename, path) ,t)
+	end
+
 	local json = json.encode (t)
 	local filePath = system.pathForFile( filename, path )
+	
+		
 	return saveData(filePath, json)
 end
 
@@ -1340,25 +1403,6 @@ end
 
 
 --------------------------------------------------------
--- Replace placeholder directory in path name with real value
--- p : a single character placeholder, default is "*"
--- v : the real value, e.g. "mypath"
--- Any slashes must be in the original.
--- Example:
--- replaceWildcard ("*/images/pic.jpg", "mydir", "?")
---------------------------------------------------------
-
-local function replaceWildcard(text, v, p)
---print ("scripts.funx.replaceWildcard", text, v, p)
-	if (text and v) then
-		p = p or "*"
-		text = text:gsub("%"..p, v)
-		end
-	return text
-end
-
-
---------------------------------------------------------
 -- Load an image file. If it is not there, load a "missing image" file
 -- filename is a full pathname, e.g. images/in/my/folder/pic.jpg
 -- Default system directory is system.ResourceDirectory
@@ -1376,7 +1420,6 @@ local function loadImageFile(filename, wildcardPath, whichSystemDirectory, showT
 	if (_DEVELOPING) then
 		showTraceOnFailure = true
 	end
-
 
 	if (filename) then
 		wildcardPath = wildcardPath or "_user"
@@ -1431,12 +1474,24 @@ local function loadImageFile(filename, wildcardPath, whichSystemDirectory, showT
 			end
 --print ("loadImageFile: Using Corona method:", filename)
 
-			anchorZero(image, "Center")
+			-- DEBUGGING TOOL
+			if ( showTraceOnFailure) then
+				if (filename == "" or not image) then
+					print ("scripts.funx.loadImageFile called by:")
+					traceback()
+				end
+			end
+
+			if (image) then
+				anchorZero(image, "Center")
+			end
 
 			return image, scaleFraction
 		end
 	end
+	-- --------
 	-- FAILURE
+	-- --------
 		
 	-- DEBUGGING TOOL
 	if (showTraceOnFailure) then
@@ -1447,8 +1502,11 @@ local function loadImageFile(filename, wildcardPath, whichSystemDirectory, showT
 	local i = display.newGroup()
 	i.anchorChildren = true
 	anchorZero(i, "Center")
-
+	
 	local image = display.newImage(i, "_ui/missing-image.png", system.ResourceDirectory, true)
+	
+	-- Set a flag to check for to learn this is a missing image and the load failed.
+	i._isMissing = true
 	
 	-- Write to the log!
 	local syspath =  system.pathForFile( "", whichSystemDirectory )
@@ -1456,7 +1514,7 @@ local function loadImageFile(filename, wildcardPath, whichSystemDirectory, showT
 	if (syspath == "") then
 			syspath = "ResourceDirectory"
 	end
-	print ("WARNING: loadImageFile cannot find ",filename," in ",syspath)
+	print ("WARNING: funx:loadImageFile() cannot find ",filename," in ",syspath)
 
 	local t = display.newText( "Cannot find:" .. filename, 0, 0, native.systemFontBold, 24 )
 	i:insert(t)
@@ -1472,6 +1530,103 @@ local function loadImageFile(filename, wildcardPath, whichSystemDirectory, showT
 	return i, 1
 end
 
+------------------------------------------------------------------------
+-- Show a message, then fade away
+------------------------------------------------------------------------
+local function tellUser(message, x,y)
+
+	if (not message) then
+		return true
+	end
+
+
+	local screenW, screenH = display.contentWidth, display.contentHeight
+	local viewableScreenW, viewableScreenH = display.viewableContentWidth, display.viewableContentHeight
+	local screenOffsetW, screenOffsetH = display.contentWidth -	 display.viewableContentWidth, display.contentHeight - display.viewableContentHeight
+	local midscreenX = screenW*(0.5)
+	local midscreenY = screenH*(0.5)
+
+	local TimeToShowMessage = 2000
+	local FadeMessageTime = 500
+
+	-- message object
+	local msg = display.newGroup()
+
+	local x = x or 0
+	local y = y or 0
+
+	local w = screenW - 40
+	local h = 0	-- height matches text
+
+	-- msg corner radius
+	local r = 10
+
+	------------------------------------------------------------------------
+	local function closeMessage( event )
+		-- remove from display hierarchy
+		msg.parent:remove( msg )
+		return true
+	end
+
+	------------------------------------------------------------------------
+	local function fadeAwayThenClose()
+		transition.to( msg,	 { time=FadeMessageTime, alpha=0, onComplete=closeMessage} )
+		timedMessage = nil
+		timedMessageList[1] = nil
+		-- remove first element
+		table.remove(timedMessageList, 1)
+		--print ("Messages:", #timedMessageList)
+	end
+
+	------------------------------------------------------------------------
+
+	-- Create empty text box, using default bold font of device (Helvetica on iPhone)
+	-- Screen Width version:
+	local textObject = display.newText( message, 0, 0, w/3,h, native.systemFontBold, 24 )
+
+	-- Fitted width version, does NOT wrap text!
+	--local textObject = display.newText( message, 0, 0, native.systemFontBold, 24 )
+	textObject:setFillColor( 255,255,255 )
+
+	w = textObject.width
+
+	-- A trick to get text to be centered
+	msg.x = midscreenX
+	msg.y = screenH/3
+	msg:insert( textObject, true )
+
+	-- hide initially
+	msg.alpha = 0
+
+	-- Insert rounded rect behind textObject
+	local bkgd = display.newRoundedRect( 0, 0, textObject.contentWidth + 2*r, textObject.contentHeight + 2*r, r )
+	bkgd:setFillColor( 55, 55, 55, 190 )
+	msg:insert( 1, bkgd, true )
+	msg.bkgd = bkgd
+	msg.textObject = textObject
+
+
+	-- Show message
+	msg.textObject.text = message
+	msg.bkgd.width = msg.textObject.width + 2*r
+
+	-- If there is a current message showing, cancel it
+	if (timedMessage) then
+		--timer.cancel(timedMessage)
+	end
+
+
+	msg.y = msg.y + (#timedMessageList - 1) * msg.bkgd.height
+
+
+	--print ("msg:show width = "..msg.textObject.width)
+	transition.to( msg,	 { time=FadeMessageTime, alpha=1} )
+	timedMessage = timer.performWithDelay( TimeToShowMessage, fadeAwayThenClose )
+	timedMessageList[#timedMessageList + 1] = timedMessage
+
+end
+
+
 
 --------------------------------------------------------
 -- Verify Net Connection OR QUIT!
@@ -1481,7 +1636,7 @@ local function verifyNetConnectionOrQuit()
 	local http = require("socket.http")
 	local ltn12 = require("ltn12")
 
-	if http.request( "http://www.google.com" ) == nil then
+	if http.request( "https://www.google.com" ) == nil then
 
 		local function onCloseApp( event )
 			if "clicked" == event.action then
@@ -1496,7 +1651,7 @@ end
 
 --------------------------------------------------------
 -- hasNetConnection: return true if connected, false if not.
--- url: a server to check (use http://...)
+-- url: a server to check (use https://...)
 -- showActivity: Turn off the activity indicator (must be turned on before starting)
 --------------------------------------------------------
 local function hasNetConnection(url,showActivity)
@@ -1526,7 +1681,20 @@ end
 -- url: a server to check (use http://...)
 -- showActivity: Turn off the activity indicator (must be turned on before starting)
 --------------------------------------------------------
+--[[
 local function canConnectWithServer(url, showActivity, callback, testing)
+
+			local function networkConnection()
+				 local socket = require("socket")
+				 local test = socket.tcp()
+				 test:settimeout(1000)  -- Set timeout to 1 second
+				 local netConn = test:connect("www.google.com", 80)
+				 if netConn == nil then
+					  return false
+				 end
+				 test:close()
+				 return true
+			end
 
 			local function MyNetworkReachabilityListener(event)
 				if (testing) then
@@ -1571,7 +1739,53 @@ local function canConnectWithServer(url, showActivity, callback, testing)
 			print("scripts.funx.canConnectWithServer: network reachability not supported on this platform")
 	end
 end
+--]]
 
+--------------------------------------------------------
+-- canConnectWithServer: return true if connected, false if not.
+-- url: a server to check (use http://...)
+-- showActivity: Turn off the activity indicator (must be turned on before starting)
+--
+-- Now, it seems that network.setStatusListener is flaky, so let's try an alternative...
+--------------------------------------------------------
+local function canConnectWithServer(url, showActivity, callback, testing)
+
+			local function networkConnection()
+				local socket = require("socket")
+				local test = socket.tcp()
+				test:settimeout(1, 't')  -- Set timeout to 1 second
+				local netConn = test:connect("www.google.com", 80)
+				if netConn == nil then
+					 return false
+				end
+				test:close()
+				return true
+			end
+
+
+	if network.canDetectNetworkStatusChanges then
+		if ( networkConnection() ) then
+				-- Turn OFF native busy activity indicator
+			if (showActivity) then
+				native.setActivityIndicator( false )
+			end
+
+			if (type(callback) ~= "function") then
+				return true
+			else
+				callback(true)
+			end
+		else
+			print ("scripts.funx.canConnectWithServer: Cannot reach www.google.com")
+			tellUser("Sorry, no internet connection.")
+		end
+		
+			--network.setStatusListener( url, MyNetworkReachabilityListener )
+	else
+			print("scripts.funx.canConnectWithServer: network reachability not supported on this platform")
+			tellUser("Sorry, this device cannot use the internet.")
+	end
+end
 
 
 --------------
@@ -1682,6 +1896,9 @@ end
 
 --===================================
 --- Frame a group by adding rectangle to a group, behind it.
+-- @param	g	:	display group to frame
+-- @param	s	:	stroke width
+-- @param	color	:	string of rgba color of stroke
 local function frameGroup(g, s, color)
 
 	local w,h = g.contentWidth or screenW, g.contentHeight or screenH
@@ -1690,10 +1907,10 @@ local function frameGroup(g, s, color)
 	g.anchorChildren = true
 
 	local bounds = g.contentBounds 
---	print( "xMin: ".. bounds.xMin ) -- xMin: 100
---	print( "yMin: ".. bounds.yMin ) -- yMin: 100
---	print( "xMax: ".. bounds.xMax ) -- xMax: 150
---	print( "yMax: ".. bounds.yMax ) -- yMax: 150
+--print( "xMin: ".. bounds.xMin ) -- xMin: 100
+--print( "yMin: ".. bounds.yMin ) -- yMin: 100
+--print( "xMax: ".. bounds.xMax ) -- xMax: 150
+--print( "yMax: ".. bounds.yMax ) -- yMax: 150
 
 	g.anchorChildren = a
 
@@ -1712,6 +1929,7 @@ local function frameGroup(g, s, color)
 	r:toBack()
 	r.anchorX, r.anchorY = 0,0
 	r.x, r.y = bounds.xMin, bounds.yMin
+	r.x, r.y = 0,0
 	g._frame = r
 end
 
@@ -1727,7 +1945,7 @@ end
 -- factor, to adjust the screen image.
 -- locked: if true or a function then lock the screen from touches or pass touch to the function.
 -------------------------------------------------
-local function dimScreen(transitionTime, color, scaling, onTouch)
+local function dimScreen(transitionTime, color, scaling, onTouch, message)
 
 	transitionTime = tonumber(transitionTime or 300)
 	color = color or { 0.75 * OPAQUE }
@@ -1735,28 +1953,40 @@ local function dimScreen(transitionTime, color, scaling, onTouch)
 	scaling = scaling or 1
 	local c = stringToColorTable(color or "55,55,55,75%")
 	-- cover all rect, darken background
-	local bkgdrect = display.newRect(0,0,screenW,screenH)
+	local bkgd = display.newGroup()
+	local bkgdrect = display.newRect(bkgd, 0,0,screenW,screenH)
 	bkgdrect.x, bkgdrect.y = midscreenX, midscreenY
 	bkgdrect:setFillColor( unpack(c) )
 	bkgdrect:scale(1/scaling, 1/scaling)
-	transition.to (bkgdrect, {alpha=opacity, time=transitionTime } )
+	
+	-- Text?
+	if (message) then
+		local t = display.newText(message, 0, 0, 0, 0, native.systemFontBold, 20 )
+		t:setFillColor( 255,255,255, 128 )
+		bkgd:insert(t)
+		t.x = midscreenX
+		t.y = t.height + 20
+	end
+	transition.to (bkgd, {alpha=opacity, time=transitionTime } )
 	
 	if (type(onTouch) ~= "function") then
 		onTouch = function() return onTouch; end
 	end
 	
-	bkgdrect:addEventListener("touch", onTouch )
+	bkgd:addEventListener("touch", onTouch )
 
-	return bkgdrect
+	return bkgd
 end
 
-local function undimScreen(handle, transitionTime, f)
+local function undimScreen(dimmerDisplayObj, transitionTime, f)
+	if (not dimmerDisplayObj) then
+		return false
+	end
+	
 		local function killme()
-			display.remove(handle)
-			handle = nil
-			if (type(transitionTime) == "function") then
-				transitionTime()
-			elseif (type(f) == "function") then
+			dimmerDisplayObj:removeSelf()
+			dimmerDisplayObj = nil
+			if (f and type(f) == "function") then
 				f()
 			end
 		end
@@ -1768,7 +1998,7 @@ local function undimScreen(handle, transitionTime, f)
 		t = 300
 	end
 
-	transition.to (handle, {alpha=0, time=t, onComplete=killme } )
+	transition.to (dimmerDisplayObj, {alpha=0, time=t, onComplete=killme } )
 end
 
 
@@ -1843,103 +2073,6 @@ local function fadeIn (obj, callback, transitionSpeed)
 end
 
 
-------------------------------------------------------------------------
--- Show a message, then fade away
-------------------------------------------------------------------------
-local function tellUser(message, x,y)
-
-	if (not message) then
-		return true
-	end
-
-
-	local screenW, screenH = display.contentWidth, display.contentHeight
-	local viewableScreenW, viewableScreenH = display.viewableContentWidth, display.viewableContentHeight
-	local screenOffsetW, screenOffsetH = display.contentWidth -	 display.viewableContentWidth, display.contentHeight - display.viewableContentHeight
-	local midscreenX = screenW*(0.5)
-	local midscreenY = screenH*(0.5)
-
-	local TimeToShowMessage = 2000
-	local FadeMessageTime = 500
-
-	-- message object
-	local msg = display.newGroup()
-
-	local x = x or 0
-	local y = y or 0
-
-	local w = screenW - 40
-	local h = 0	-- height matches text
-
-	-- msg corner radius
-	local r = 10
-
-	------------------------------------------------------------------------
-	local function closeMessage( event )
-		-- remove from display hierarchy
-		msg.parent:remove( msg )
-		return true
-	end
-
-	------------------------------------------------------------------------
-	local function fadeAwayThenClose()
-		transition.to( msg,	 { time=FadeMessageTime, alpha=0, onComplete=closeMessage} )
-		timedMessage = nil
-		timedMessageList[1] = nil
-		-- remove first element
-		table.remove(timedMessageList, 1)
-		--print ("Messages:", #timedMessageList)
-	end
-
-	------------------------------------------------------------------------
-
-	-- Create empty text box, using default bold font of device (Helvetica on iPhone)
-	-- Screen Width version:
-	local textObject = display.newText( message, 0, 0, w/3,h, native.systemFontBold, 24 )
-
-	-- Fitted width version, does NOT wrap text!
-	--local textObject = display.newText( message, 0, 0, native.systemFontBold, 24 )
-	textObject:setFillColor( 255,255,255 )
-
-	w = textObject.width
-
-	-- A trick to get text to be centered
-	msg.x = midscreenX
-	msg.y = screenH/3
-	msg:insert( textObject, true )
-
-	-- hide initially
-	msg.alpha = 0
-
-	-- Insert rounded rect behind textObject
-	local bkgd = display.newRoundedRect( 0, 0, textObject.contentWidth + 2*r, textObject.contentHeight + 2*r, r )
-	bkgd:setFillColor( 55, 55, 55, 190 )
-	msg:insert( 1, bkgd, true )
-	msg.bkgd = bkgd
-	msg.textObject = textObject
-
-
-	-- Show message
-	msg.textObject.text = message
-	msg.bkgd.width = msg.textObject.width + 2*r
-
-	-- If there is a current message showing, cancel it
-	if (timedMessage) then
-		--timer.cancel(timedMessage)
-	end
-
-
-	msg.y = msg.y + (#timedMessageList - 1) * msg.bkgd.height
-
-
-	--print ("msg:show width = "..msg.textObject.width)
-	transition.to( msg,	 { time=FadeMessageTime, alpha=1} )
-	timedMessage = timer.performWithDelay( TimeToShowMessage, fadeAwayThenClose )
-	timedMessageList[#timedMessageList + 1] = timedMessage
-
-end
-
-
 -------------------------------------------------
 -- POPUP: popup a display group
 -- We have white and black popups. Default is white.
@@ -1950,9 +2083,9 @@ end
 		@param	[display object] table.object
 		@param	[string] table.backgroundColor
 		@param	[string] table.showBackground
-		@param	[string] table.bkgdAlpha
 		@param	[string] table.transitionTime
 		@param	[string] table.filename
+		@param	[string] table.cancelOnTouch
 --]]
 -------------------------------------------------
 local function popupDisplayGroup(t, frontstage)
@@ -1962,21 +2095,20 @@ local function popupDisplayGroup(t, frontstage)
 	if (not obj or (obj.isVisible == true and obj.alpha > 0) ) then
 		return false
 	end
+
+	local backgroundAlpha = t.backgroundAlpha or "50%"
+	local backgroundColor = t.backgroundColor or "white"
+	if (backgroundColor == "white") then
+		backgroundColor = "255,255,255," .. backgroundAlpha
+	else
+		backgroundColor = "0,0,0," .. backgroundAlpha
+	end
 	
-	--[[
-	local	backgroundColor = trim(t.backgroundColor)
-	local	showBackground = t.showBackground
-	local	bkgdAlpha = applyPercent(bkgdAlpha or 0.95,1)
-	local backgroundFile = trim(t.backgroundFile )
-	--]]
-	
-	local	transitionTime = tonumber(t.time) or 300
+	local	transitionTime = tonumber(t.transitionTime) or 300
 	local	doDimScreen = t.doDimScreen
 	local	cancelOnTouch = t.cancelOnTouch
 
 	local closing = false
-
-
 
 			local function moveToFrontstage(obj)
 	
@@ -2034,7 +2166,6 @@ local function popupDisplayGroup(t, frontstage)
 				end
 			end
 	
-	
 			local function cleanup()
 				if (doDimScreen) then
 					undimScreen(obj._dim)
@@ -2057,71 +2188,36 @@ local function popupDisplayGroup(t, frontstage)
 				end
 				return true
 			end
-			
-			
-			
+
 	
 	-- w/h of the popup	
 	local w,h = obj.contentWidth, obj.contentHeight
-
-			
+	
 	--[[
-	-- BACKGROUND
-	-- cover all rect, darken background
-	local bkgdrect = display.newRect(0,0,screenW,screenH)
-	obj:insert(bkgdrect)
-	bkgdrect:setFillColor( 55, 55, 55, 190 )
-	
-	-- background graphic for popup
-	-- If the default fails, try using the value as a filename
-	local bkgd
-	if (backgroundFile) then
-		bkgd = display.newImage( backgroundFile, true)
-	elseif (backgroundColor) then
-		bkgd = display.newRect(0,0, obj.contentWidth, obj.contentHeight)
-		bkgd:setFillColor( stringToColorTable(backgroundColor))
-	end
-	
-	local bkgdWidth, bkgdHeight
-	if (bkgd) then
-		checkScale(bkgd)
-		obj:insert (bkgd)
-		anchor(bkgd, "Center")
-		bkgd.x = midscreenX
-		bkgd.y = midscreenY
-		bkgd.alpha = bkgdAlpha
-		bkgdWidth = bkgd.width
-		bkgdHeight = bkgd.height
-		w,h = bkgd.contentWidth, bkgd.contentHeight
+	-- Create a background by inserting into the object
+	if (t.showBackground) then
+		-- BACKGROUND
+		-- cover all rect, darken background
+		local bkgdrect = display.newRect(0,0,screenW,screenH)
+		bkgdrect.alpha = bkgdAlpha
+		obj:insert(bkgdrect)
+		bkgdrect:toBack()		
+		bkgdrect:setFillColor(unpack(backgroundColor))
 	end
 	--]]
-	
-	local closeButton = widget.newButton{
-		defaultFile = "_ui/button-cancel-round.png",
-		overFile = "_ui/button-cancel-round-over.png",
-		onRelease = closeMe,
-	}
-	obj:insert(closeButton)
-	obj._popupCloseButton = closeButton
-	anchorZero(closeButton, "Center")
-	closeButton.x = (w) - closeButton.width/4
-	closeButton.y = closeButton.height/4
-	closeButton:toFront()
+
 
 	obj.alpha = 0
 	obj.isVisible = true
 	
-	--[[ 
-	-- Dimming requires moving to front stage, etc. No time for that now
-	
-	
 	if (doDimScreen) then
 		-- true means lock the background against touches
-		local c = "0,0,0,75%"
-		obj._dim = dimScreen(transitionTime, c, nil, true)
+		local dim = dimScreen(transitionTime, backgroundColor, nil, true)
+		moveToFrontstage(dim)
+		obj._dim = dim
 	end
-	--]]
 	
+	-- If a frontstage object is passed to the function, we can use it.
 	if (frontstage) then
 		moveToFrontstage(obj)
 	end
@@ -2132,6 +2228,18 @@ local function popupDisplayGroup(t, frontstage)
 		obj:addEventListener( "touch", closeMe )
 	else
 		obj:addEventListener( "touch", function() return true end )
+
+		local closeButton = widget.newButton{
+			defaultFile = "_ui/button-cancel-round.png",
+			overFile = "_ui/button-cancel-round-over.png",
+			onRelease = closeMe,
+		}
+		obj:insert(closeButton)
+		obj._popupCloseButton = closeButton
+		anchorZero(closeButton, "Center")
+		closeButton.x = (w) - closeButton.width/4
+		closeButton.y = closeButton.height/4
+		closeButton:toFront()
 	end
 
 	transition.to (obj, {alpha=1, time=transitionTime } )
@@ -2143,35 +2251,43 @@ end
 
 
 -------------------------------------------------
--- POPUP: popup image with close button
+-- POPUP: popup an image with close button
 -- We have white and black popups. Default is white.
 -- If the first param is a table, then we assume all params are in that table, IN ORDER!!!,
 -- starting with filename, e.g. { "filename.jpg", "white", 1000, true}
+-- If cancelOnTouch is true, don't add a "close" button.
+--[[
+	@param	[table] t = table of params, below:
+		@param	[string] filename to load
+		@param	[string] table.backgroundColor
+		@param	[string] table.backgroundAlpha
+		@param	[string] table.transitionTime
+		@param	[string] table.filename
+		@param	[string] table.cancelOnTouch
+--]]
 -------------------------------------------------
-local function popup(filename, color, bkgdAlpha, transitionTime, cancelOnTouch)
+local function popup(t)
 
 	local mainImage
 	local pgroup = display.newGroup()
 	pgroup.anchorChildren = true
-	
+	addPosRect(pgroup,true)
+	pgroup.x, pgroup.y = midscreenX, midscreenY
+
 	local closing = false
 
-	if (type(filename) == "table") then
-		color = filename.color
-		bkgdAlpha = filename.bkgdAlpha
-		transitionTime = tonumber(filename.time)
-		cancelOnTouch =	 filename.cancelOnTouch or false
-		filename = trim(filename.filename)
+	color = t.backgroundColor
+	transitionTime = tonumber(t.transitionTime)
+	cancelOnTouch = t.cancelOnTouch
+	filename = trim(t.filename)
+
+	local backgroundAlpha = t.backgroundAlpha or "50%"
+	local backgroundColor = t.backgroundColor or "white"
+	if (backgroundColor == "white") then
+		backgroundColor = "255,255,255," .. backgroundAlpha
+	else
+		backgroundColor = "0,0,0," .. backgroundAlpha
 	end
-
-	bkgdAlpha = applyPercent(bkgdAlpha, 1)
-
-	color = trim(color)
-	if (color == "") then
-		color = "white"
-	end
-
-	bkgdAlpha = applyPercent(bkgdAlpha,1) or 0.95
 
 	transitionTime = tonumber(transitionTime)
 	transitionTime = transitionTime or 300
@@ -2196,11 +2312,19 @@ local function popup(filename, color, bkgdAlpha, transitionTime, cancelOnTouch)
 		end
 		return true
 	end
-	-- cover all rect, darken background
+	
+	-- Background rect to cover the background AND for positioning
+	
 	local bkgdrect = display.newRect(0,0,screenW,screenH)
 	pgroup:insert(bkgdrect)
 	bkgdrect:setFillColor( 55, 55, 55, 190 )
-	-- background graphic for popup
+	anchor(bkgdrect, "TopLeft")
+	bkgdrect.x = 0
+	bkgdrect.y = 0
+	
+	
+	
+	-- Background graphic for popup
 	-- If the default fails, try using the value as a filename
 	local bkgd = display.newImage("_ui/popup-"..color..".png", true)
 	if (not bkgd) then
@@ -2209,21 +2333,22 @@ local function popup(filename, color, bkgdAlpha, transitionTime, cancelOnTouch)
 			print ("ERROR: Missing popup background image ("..color..")")
 		end
 	end
+	
 	local bkgdWidth, bkgdHeight
 	if (bkgd) then
 		checkScale(bkgd)
-		pgroup:insert (bkgd)
 		anchor(bkgd, "Center")
 		bkgd.x = midscreenX
 		bkgd.y = midscreenY
-		bkgd.alpha = bkgdAlpha
 		bkgdWidth = bkgd.width
 		bkgdHeight = bkgd.height
 	else
 		bkgdWidth = screenW * 0.95
 		bkgdHeight = screenH * 0.95
 	end
+	pgroup:insert (bkgd)
 
+	-- Load the main image to show
 	mainImage = display.newImage(filename, true)
 	checkScale(mainImage)
 	pgroup:insert (mainImage)
@@ -2231,26 +2356,29 @@ local function popup(filename, color, bkgdAlpha, transitionTime, cancelOnTouch)
 	mainImage.x = midscreenX
 	mainImage.y = midscreenY
 
-	local closeButton = widget.newButton{
-		defaultFile = "_ui/button-cancel-round.png",
-		overFile = "_ui/button-cancel-round-over.png",
-		onRelease = closeMe,
-	}
-	pgroup:insert(closeButton)
-	anchorZero(closeButton, "Center")
-	closeButton.x = (bkgd.width/2) - closeButton.width/4
-	closeButton.y = -(bkgd.height/2) + closeButton.height/4
-	closeButton:toFront()
-
-	pgroup.alpha = 0
-
 	-- Capture touch events and do nothing.
 	if (cancelOnTouch) then
 		pgroup:addEventListener( "touch", closeMe )
 	else
 		pgroup:addEventListener( "touch", function() return true end )
-	end
 
+		local closeButton = widget.newButton{
+			defaultFile = "_ui/button-cancel-round.png",
+			overFile = "_ui/button-cancel-round-over.png",
+			onRelease = closeMe,
+		}
+		pgroup:insert(closeButton)
+		anchorZero(closeButton, "Center")
+	--	closeButton.x = (bkgd.width/2) - closeButton.width/4
+	--	closeButton.y = -(bkgd.height/2) + closeButton.height/4
+		closeButton.x = bkgd.x + (bkgd.width/2) - closeButton.width/4
+		closeButton.y = bkgd.y - (bkgd.height/2)+ closeButton.height/4
+		closeButton:toFront()
+
+	end
+	
+	-- Fade in the result
+	pgroup.alpha = 0
 	transition.to (pgroup, {alpha=1, time=transitionTime } )
 
 end
@@ -2259,8 +2387,11 @@ end
 
 -------------------------------------------------
 -- POPUP: popup web page
+-- This version uses native.showWebPopup, which is NOT working for
+-- sites with redirects!
 -------------------------------------------------
-local function popupWebpage(targetURL, color, bkgdAlpha, transitionTime, netrequired, noNetMsg)
+--[[
+local function popupWebpageOLD(targetURL, color, bkgdAlpha, transitionTime, netrequired, noNetMsg)
 	
 	local testing = false
 	
@@ -2272,7 +2403,8 @@ local function popupWebpage(targetURL, color, bkgdAlpha, transitionTime, netrequ
 		targetURL = trim(targetURL[1])
 	end
 
-
+--print ("FUNX:popupWebPage() : targetURL",targetURL)
+	
 	--------------------------
 	local function doPop(isReachable)
 
@@ -2393,16 +2525,191 @@ local function popupWebpage(targetURL, color, bkgdAlpha, transitionTime, netrequ
 	-- Don't test with our URL, since it might have authentication in it,
 	-- e.g. human:password@myurl.com
 	--local testurl = targetURL
-	local testurl = "http://google.com"
+	local testurl = "https://google.com"
 	if (substring(testurl, 1, 4) == "http") then
 		testurl = testurl:gsub("^https?://", "")
 	end
 	-- strip subfolders b/c of iOS bug
 	testurl = gsub(testurl, "/.*", "")
+	
+	-- If this is HTTP, warn developer that he should use HTTPS
+	if (substring(targetURL, 1, 5) ~= "https") then
+		print ("WARNING: funx.popupWebPage(): You are using http:// when you should use https:// because Apple's ATS does not like insecure connections: ",targetURL)
+	end
+
 
 	canConnectWithServer(testurl, false, doPop, testing)
 		
 end
+--]]
+
+
+
+
+
+-------------------------------------------------
+-- POPUP: popup web page
+-- New version using native.newWebView
+-------------------------------------------------
+local function popupWebpage(targetURL, color, bkgdAlpha, transitionTime, netrequired, noNetMsg)
+	
+	local testing = false
+	
+	local closing = false
+	if (type(targetURL) == "table") then
+		color = trim(targetURL[2])
+		bkgdAlpha = tonumber(targetURL[3])
+		transitionTime = tonumber(targetURL[4])
+		targetURL = trim(targetURL[1])
+	end
+
+--print ("FUNX:popupWebPage() : targetURL",targetURL)
+	
+	--------------------------
+	local function doPop(isReachable)
+
+--print ("doPop says, isReachable =", isReachable)
+
+		if (isReachable) then
+		
+			-- The webview object
+			local webView
+
+			local mainImage
+			local pgroup = display.newGroup()
+			anchor(pgroup, "Center")
+			pgroup.x, pgroup.y = midscreenX, midscreenY
+	
+			color = color or "white"
+
+			bkgdAlpha = bkgdAlpha or 0.95
+			transitionTime = transitionTime or 300
+
+			local function killme()
+				if (pgroup ~= nil) then
+					webView:removeSelf()
+					display.remove(pgroup)
+					pgroup=nil
+					--print "Killed it"
+				else
+					--print ("Tried to kill pGroup, but it was dead.")
+				end
+			end
+
+			local function closeMe(event)
+				if (not closing and pgroup ~= nil) then
+					--native.cancelWebPopup()
+					transition.to (webView, {alpha=0, time=transitionTime} )
+					transition.to (pgroup, {alpha=0, time=transitionTime, onComplete=killme} )
+					closing = true
+				end
+				return true
+			end
+
+
+			-- cover all rect, darken background
+			local bkgdrect = display.newRect(0,0,screenW,screenH)
+			pgroup:insert(bkgdrect)
+			anchor(bkgdrect, "Center")
+			bkgdrect:setFillColor( 55, 55, 55, 190 )
+
+			-- background graphic for popup
+			local bkgd = display.newImage("_ui/popup-"..color..".png", true)
+			checkScale(bkgd)
+			pgroup:insert (bkgd)
+			anchor(bkgdrect, "Center")
+			bkgd.alpha = bkgdAlpha
+
+			local closeButton = widget.newButton {
+				id = "close",
+				defaultFile = "_ui/button-cancel-round.png",
+				overFile = "_ui/button-cancel-round-over.png",
+				onRelease = closeMe,
+			}
+			pgroup:insert(closeButton)
+			anchor(closeButton, "TopRight")
+			anchorZero(closeButton, "Center")
+			closeButton.x = (bkgd.width/2) - closeButton.width/4
+			closeButton.y = -(bkgd.height/2) + closeButton.height/4
+			closeButton:toFront()
+	
+			pgroup.alpha = 0
+
+			-- Capture touch events and do nothing.
+			pgroup:addEventListener( "touch", function() return true end )
+
+			local function showMyWebPopup()
+						local function listener( event )
+							local shouldLoad = true
+
+--print ("popupWebpage:listener")
+--dumptable(event)
+--print ("========")
+--print ("event.errorCode",event.errorCode)
+							if ( event.errorCode and event.errorCode ~= -999 ) then
+								-- Error loading page
+								print( "showMyWebPopup: Error: " .. tostring( event.errorMessage ) )
+								shouldLoad = false
+							end
+
+							return shouldLoad
+						end
+
+
+				-- web popup
+				local x = (screenW - bkgd.width)/2 + (closeButton.width)
+				local y = (screenH - bkgd.height)/2 + (closeButton.height)
+				local w = bkgd.width - (2 * closeButton.width)
+				local h = bkgd.height - (2 * closeButton.width)
+
+				--print ("showWebMap: go to ",targetURL)
+				--print (x, y, w, h, targetURL)
+			
+				local options = {
+					hasBackground=true,
+					urlRequest = listener,
+					-- Only need this for local URLs
+					--baseUrl=system.ResourceDirectory,
+				}
+--print ("showWebPopup:",targetURL)
+--print ("========")
+				webView = native.newWebView( display.contentCenterX, display.contentCenterY, w, h )
+				webView:request( targetURL )
+				webView:addEventListener( "urlRequest", listener )
+				--native.showWebPopup(x, y, w, h, targetURL, options )
+			end
+			transitionTime = tonumber(transitionTime)
+			transition.to (pgroup, {alpha=1, time=transitionTime, onComplete=showMyWebPopup } )
+
+		else
+			noNetMsg = noNetMsg or "No Internet"
+			tellUser(noNetMsg .. ":" .. targetURL)
+		end
+	end	-- callback function
+	--------------------------
+	
+	-- Do we have network?
+	-- Don't test with our URL, since it might have authentication in it,
+	-- e.g. human:password@myurl.com
+	--local testurl = targetURL
+	local testurl = "https://google.com"
+	if (substring(testurl, 1, 4) == "http") then
+		testurl = testurl:gsub("^https?://", "")
+	end
+	-- strip subfolders b/c of iOS bug
+	testurl = gsub(testurl, "/.*", "")
+	
+	-- If this is HTTP, warn developer that he should use HTTPS
+	if (substring(targetURL, 1, 5) ~= "https") then
+		print ("WARNING: funx.popupWebPage(): You are using http:// when you should use https:// because Apple's ATS does not like insecure connections: ",targetURL)
+	end
+
+
+	canConnectWithServer(testurl, false, doPop, testing)
+		
+end
+
+
 
 
 
@@ -2441,7 +2748,7 @@ local function buildShadow(w,h,sw,opacity)
 
 --addPosRect(shadow,false)
 
-	--shadow.anchorChildren = true
+	shadow.anchorChildren = true
 
 	--print ("buildShadow: ",w,h)
 
@@ -2516,19 +2823,18 @@ local function buildShadow(w,h,sw,opacity)
 		tr:scale(r,r)
 		bl:scale(r,r)
 		br:scale(r,r)
-		
-		-- Rotations make this non-obvious, x,y get flipped!
-		top.width = sw
-		top.height = w
-		bottom.width = sw
-		bottom.height = w
-
-		left.width = sw
-		left.height = h
-		right.width = sw
-		right.height = h
-
 	end
+
+	-- Rotations make this non-obvious, x,y get flipped!
+	top.width = sw
+	top.height = w
+	bottom.width = sw
+	bottom.height = w
+
+	left.width = sw
+	left.height = h
+	right.width = sw
+	right.height = h
 
 
 
@@ -3380,6 +3686,7 @@ end
 --   w,h = maxWidth, maxHeight
 --   pic = loadImageFile(filename)
 --   pic.width, pic.height = funx.getFinalSizes (w,h, pic.width, pic.height, true)
+--		@param p 	boolean	true = fit inside if h,w are set
 
 local function getFinalSizes (w,h, originalW, originalH, p)
 	local wPercent, hPercent
@@ -4326,7 +4633,7 @@ end
 -- Color is a color string "R,G,B"
 local function coverUpScreenEdges(color)
 
-	color = color or "0,0,0"
+	color = color or "0,0,0,255"
 --color = "200,30,30"
 	local c = stringToColorTable(color)
 
@@ -4334,8 +4641,8 @@ local function coverUpScreenEdges(color)
 	local deviceWidth = round(( display.contentWidth - (display.screenOriginX * 2) ) / display.contentScaleX)
 	local deviceHeight = round(( display.contentHeight - (display.screenOriginY * 2) ) / display.contentScaleY)
 
-	local actualWidth = deviceWidth * display.contentScaleX
-	local actualHeight = deviceHeight * display.contentScaleY
+	local actualWidth = display.actualContentWidth
+	local actualHeight = display.actualContentHeight
 
 	-- Don't make bars if no need for them
 	if (screenW == actualWidth and screenH == actualHeight) then
@@ -4344,11 +4651,12 @@ local function coverUpScreenEdges(color)
 
 	local coverup = display.newGroup()
 
-	local barWidth = (actualWidth - screenW)/2
+	-- add 2 to be sure...we have had show-through due to decimal errors.
+	local barWidth = floor( (actualWidth - screenW)/2 ) + 2
 	local barL = display.newRect(coverup, 0,0,barWidth,screenH)
 	local barR = display.newRect(coverup, 0,0,barWidth,screenH)
-	barL:setFillColor(c[1],c[2], c[3])
-	barR:setFillColor(c[1],c[2], c[3])
+	barL:setFillColor(c[1],c[2], c[3],c[4] or 255)
+	barR:setFillColor(c[1],c[2], c[3],c[4] or 255)
 	anchor(barL, "TopLeft")
 	anchor(barR, "TopLeft")
 	barL.x = -barWidth
@@ -4362,8 +4670,15 @@ local function coverUpScreenEdges(color)
 		coverup.rotation = 90
 	end
 	--]]
-
-
+--print ("actualContentWidth", display.actualContentWidth)
+--print ("display.contentWidth", display.contentWidth)
+--print ("deviceWidth", deviceWidth)
+--print ("actualWidth", actualWidth)
+--print ("screenW", screenW)
+--print ("barWidth", barWidth)
+--print ("barWidth2", (deviceWidth - screenW)/2 )
+--print( "display.pixelWidth", display.pixelWidth )
+--print( "display.pixelHeight", display.pixelHeight )
 	return coverup
 end
 
@@ -5168,7 +5483,7 @@ end
 ------------------------------------------------------------
 ------------------------------------------------------------
 -- Alert the user that something significant has happened by flashing an object
-function FUNX.flashObject(obj, t, a)
+local function flashObject(obj, t, a)
 	if (obj._flashObject == true) then
 		return
 	end
@@ -5193,6 +5508,21 @@ function FUNX.flashObject(obj, t, a)
 
 end
 
+
+------------------------------------------------------------
+------------------------------------------------------------
+-- Fix articles for English
+-- e.g. a => an before a vowel
+-- fixArticle ("a", "apple") => "an"
+-- @param	w	[string] the word after the article
+local function fixArticle(a,w)
+	if ( string.match(a, '^[aeiou]')) then
+		if (lower(a) == "a") then
+			a = a .. "n"
+		end
+	end
+	return a
+end
 
 -- ====================================================================
 -- Tables of values
@@ -5231,6 +5561,9 @@ FUNX.adjustXYforShadow  = adjustXYforShadow
 FUNX.anchor = anchor
 FUNX.anchorZero = anchorZero
 
+--FUNX.buildShadowObj = buildShadowObj
+--FUNX.getTextStyles  = getTextStyles 
+--FUNX.setTextStyles  = setTextStyles 
 FUNX.applyMask = applyMask
 FUNX.applyPercent  = applyPercent 
 FUNX.applyPercentIfSet = applyPercentIfSet
@@ -5238,7 +5571,6 @@ FUNX.autoWrappedText  = autoWrappedText
 FUNX.basename  = basename 
 FUNX.buildPictureCorners  = buildPictureCorners 
 FUNX.buildShadow = buildShadow
---FUNX.buildShadowObj = buildShadowObj
 FUNX.buildTextDisplayObjectsFromTemplate  = buildTextDisplayObjectsFromTemplate 
 FUNX.callClean  = callClean 
 FUNX.canConnectWithServer = canConnectWithServer
@@ -5248,6 +5580,7 @@ FUNX.checkScale = checkScale
 FUNX.checksum = checksum
 FUNX.cleanGroups  = cleanGroups 
 FUNX.cleanPath  = cleanPath 
+FUNX.convertAnchorToReferencePointName = convertAnchorToReferencePointName
 FUNX.copyDir  = copyDir 
 FUNX.copyFile  = copyFile 
 FUNX.coverUpScreenEdges = coverUpScreenEdges
@@ -5256,15 +5589,17 @@ FUNX.datetime_to_unix_time = datetime_to_unix_time
 FUNX.deleteDirectoryContents = deleteDirectoryContents
 FUNX.dimScreen = dimScreen
 FUNX.dirname = dirname
-FUNX.newArc = newArc
 FUNX.dump = dumptable
 FUNX.escape = escape
 FUNX.fadeIn  = fadeIn 
 FUNX.fadeOut  = fadeOut 
 FUNX.fileExists = fileExists
 FUNX.findFile = findFile
+FUNX.fixArticle = fixArticle
 FUNX.fixCapsForReferencePoint = fixCapsForReferencePoint
 FUNX.flashscreen = flashscreen
+FUNX.flashObject = flashObject
+FUNX.flattenTable  = flattenTable 
 FUNX.formatDate = formatDate
 FUNX.frameGroup = frameGroup
 FUNX.get_date_parts = get_date_parts
@@ -5280,7 +5615,6 @@ FUNX.getmonth = getmonth
 FUNX.getRandomSet = getRandomSet
 FUNX.getScaledFilename = getScaledFilename
 FUNX.getStatusBarHeight = getStatusBarHeight
---FUNX.getTextStyles  = getTextStyles 
 FUNX.getValue = getValue
 FUNX.getXHeightAdjustment  = getXHeightAdjustment 
 FUNX.hasFieldCodes = hasFieldCodes
@@ -5297,7 +5631,6 @@ FUNX.keysExistInTable = keysExistInTable
 FUNX.lazyLoad = lazyLoad
 FUNX.lines = lines
 FUNX.loadData = loadData
-FUNX.readFile = readFile
 FUNX.loadImageFile = loadImageFile
 FUNX.loadTable = loadTable
 FUNX.loadTableFromFile = loadTableFromFile
@@ -5308,6 +5641,7 @@ FUNX.makeMaskForRect = makeMaskForRect
 FUNX.mediaFileType = mediaFileType
 FUNX.mkdir  = mkdir 
 FUNX.mkdirTree  = mkdirTree 
+FUNX.newArc = newArc
 FUNX.OLD_substitutionsSLOWER  = OLD_substitutionsSLOWER 
 FUNX.openURLWithConfirm = openURLWithConfirm
 FUNX.pairsByKeys  = pairsByKeys 
@@ -5321,12 +5655,11 @@ FUNX.positionByName = positionByName
 FUNX.positionObject = positionObject
 FUNX.positionObjectAroundCenter = positionObjectAroundCenter
 FUNX.positionObjectWithReferencePoint = positionObjectWithReferencePoint
-FUNX.setAnchorFromReferencePoint = setAnchorFromReferencePoint
-FUNX.convertAnchorToReferencePointName = convertAnchorToReferencePointName
-FUNX.reanchor = reanchor
-FUNX.reanchorToCenter = reanchorToCenter
 FUNX.printFuncName = printFuncName
 FUNX.ratioToFitMargins  = ratioToFitMargins 
+FUNX.readFile = readFile
+FUNX.reanchor = reanchor
+FUNX.reanchorToCenter = reanchorToCenter
 FUNX.referenceAdjustedXY  = referenceAdjustedXY 
 FUNX.removeFields  = removeFields 
 FUNX.removeFieldsSingle  = removeFieldsSingle 
@@ -5342,11 +5675,12 @@ FUNX.saveData = saveData
 FUNX.saveTable = saveTable
 FUNX.saveTableToFile = saveTableToFile
 FUNX.scaleFactorForRetina = scaleFactorForRetina
+FUNX.scaleFactorForScreen = scaleFactorForScreen
 FUNX.scaleObjectToMargins  = scaleObjectToMargins 
 FUNX.ScaleObjToSize  = ScaleObjToSize 
+FUNX.setAnchorFromReferencePoint = setAnchorFromReferencePoint
 FUNX.setCase = setCase
 FUNX.setFillColorFromString = setFillColorFromString
---FUNX.setTextStyles  = setTextStyles 
 FUNX.showContentToLocal = showContentToLocal
 FUNX.showTestBox  = showTestBox 
 FUNX.showTestLine  = showTestLine 
@@ -5359,7 +5693,6 @@ FUNX.stringToColorTableHDR = stringToColorTableHDR
 FUNX.stringToMarginsTable = stringToMarginsTable
 FUNX.stripCommandLinesFromText = stripCommandLinesFromText
 FUNX.strokeGroupObject = strokeGroupObject
-FUNX.flattenTable  = flattenTable 
 FUNX.substitutions  = substitutions 
 FUNX.table_multi_sort = table_multi_sort
 FUNX.table_sort = table_sort
