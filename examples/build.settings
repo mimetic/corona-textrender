@@ -1,0 +1,93 @@
+settings =
+{
+	orientation =
+	{
+		default = "PortraitLeft",
+		supported =
+		{
+			"portraitLeft", "portraitRight"
+		},
+	},
+
+	plugins =
+	{
+	   --key is the name passed to Lua's 'require()'
+		["CoronaProvider.native.popup.social"] =
+		{
+			--required
+			publisherId = "com.coronalabs",
+		},
+	},
+
+	iphone = {
+		plist = {
+			UIAppFonts = 
+						{
+						"LoveYaLikeASisterSolid.ttf",
+						"NothingYouCouldSay.ttf",
+						},
+			UIInterfaceOrientation = "UIInterfaceOrientationLandscapeRight",
+			UISupportedInterfaceOrientations =
+			{
+				"UIInterfaceOrientationLandscapeLeft",
+				"UIInterfaceOrientationLandscapeRight"
+			},
+			
+			CoronaUseIOS7IPadPhotoPickerLandscapeOnlyWorkaround = true,
+			CoronaUseIOS6IPadPhotoPickerLandscapeOnlyWorkaround = true,
+			CoronaUseIOS7LandscapeOnlyWorkaround = true,
+			CoronaUseIOS6LandscapeOnlyWorkaround = true,
+
+			UIPrerenderedIcon=true,
+			UIStatusBarHidden=true,
+			CFBundleDisplayName="Inside-Outside",
+			UIApplicationExitsOnSuspend = false,
+
+			FacebookAppID = "",
+			CFBundleURLTypes =
+			{
+				{
+					CFBundleURLSchemes =
+					{
+						"",
+					}
+				}
+			},
+			CFBundleIconFile = "Icon.png",
+			CFBundleIconFiles = {
+								"Icon-72.png",
+								"Icon-72@2x.png",
+								"Icon-76.png",
+								"Icon-76@2x.png",
+								"Icon-120.png",
+								"Icon-iPad-Spotlight-iOS7@2x.png",
+								"Icon-Small-50.png",
+								"Icon-Small.png",
+								"Icon-Small@2x.png",
+								"Icon-Spotlight-iOS7.png",
+								"Icon-Spotlight-iOS7@2x.png",
+								"Icon.png",
+								"Icon@2x.png",
+			},
+		},
+	},
+	
+	
+	android =
+	{
+		usesPermissions =
+		{
+			"android.permission.INTERNET",
+			"android.permission.WRITE_EXTERNAL_STORAGE",
+		},
+	},
+
+	
+}
+
+settings.iphone.plist["UIInterfaceOrientation~ipad"] = "UIInterfaceOrientationLandscapeLeft"
+settings.iphone.plist["UISupportedInterfaceOrientations~ipad"] = 
+{
+	"UIInterfaceOrientationLandscapeLeft",
+	"UIInterfaceOrientationLandscapeRight"
+}

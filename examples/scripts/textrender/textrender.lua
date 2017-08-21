@@ -227,6 +227,22 @@ local isListTag = {
 -- Common functions redefined for speed
 --------------------------------------------------------
 
+-- Get the yOffset for the first line of the text for proper positioning of the
+-- line of text. This is set for the Ascent (not cap-height).
+-- My formula matches InDesign, where for a text block, the Baseline Options, Offset = ascent
+local function GetYAdjustment(text, font)
+	-- Old method
+	--local yAdjustment = ( (size / sampledFontSize ) * textHeight) - height
+
+	local metrics = graphics.getFontMetrics( font, text.size )
+	yAdjustment = metrics.height - text.height
+
+	-- Alternative method: To align to the Cap Height:
+	--yAdjustment = text.baselineOffset
+	
+	return yAdjustment
+end
+
 
 --------------------------------------------------------
 -- Convert CSS relational font sizings to percent
@@ -438,6 +454,13 @@ end
 local function first_row(db, cmd)
 	local row = false
 	local a
+	
+--	if ( pcall(db:nrows(cmd) )) then
+--		print ("OK")
+--    else
+--      print ("SQLITE DATABASE ERROR:" , pcall(db:nrows(cmd)) )
+--    end
+--	
 	for a in db:nrows(cmd) do
 		return a
 	end
@@ -671,13 +694,18 @@ end
 
 local function openCacheDB()
 	-- Create the new DB
---print ("not T.db or not T.db:isopen()", not T.db or not T.db:isopen())
+--print ("textrender : openCachDB() : not T.db or not T.db:isopen()", not T.db or not T.db:isopen())
 	if ( not T.db or not T.db:isopen() ) then
 		local path = system.pathForFile( "textcache.db", system.CachesDirectory )
 		local db = sqlite3.open( path )
 		-- Be sure the table exists		
 		local cmd = "CREATE TABLE IF NOT EXISTS caches (id TEXT PRIMARY KEY, cache TEXT, baseline TEXT );"
-		db:exec( cmd )
+		local err = db:exec( cmd )
+		
+		if (err ~= 0) then
+			-- error!
+			print ("ERROR: textrender : openCacheDB() : sqllite error = " .. err)
+		end
 		
 		-- save in the module table
 		T.db = db
@@ -872,41 +900,22 @@ end
 ------------------------------------------------
 -- Get the ascent of a font, which is how we position text.
 -- Set InDesign to position from the box top using leading
+-- ONLY "ascent" is actually used!!!
+-- Caching is much, much faster than recalculating, so we use the cache if possible
 ------------------------------------------------
 local function getFontAscent(baselineCache, font, size)
 	
 	local baseline, descent, ascent
-
-	if (baselineCache[font] and baselineCache[font][size]) then
+	
+	if ( baselineCache[font] and baselineCache[font][size]) then
 			baseline, descent, ascent = unpack(baselineCache[font][size])
 	else
-
-		local fontInfo = fontMetrics.getMetrics(font)
-
-		-- Get the iOS bounding box size for this particular font!!!
-		-- This must be done for each size and font, since it changes unpredictably
-		local samplefont = display.newText("X", 0, 0, font, size)
-		local boxHeight = samplefont.height
-		samplefont:removeSelf()
-		samplefont = nil
-
-		-- Set the new baseline from the font metrics
-		baseline = boxHeight + (size * fontInfo.descent)
-		
-		ascent = fontInfo.ascent * size
-		
-		-- This should adjust the font above/below the baseline to reflect differences in fonts,
-		-- putting them all on the same line.
-		-- This amount is above the bottom of the rendered font box
-		descent = (size * fontInfo.descent)
-
-		if (not baselineCache[font]) then
-			baselineCache[font] = {}
-		end
-		baselineCache[font][size] = { baseline, descent, ascent }
-		
+		local metrics = graphics.getFontMetrics( font, size )
+		ascent = metrics.ascent
+		descent = metrics.descent
 	end
-	return baseline, descent, ascent
+
+	return ascent, descent
 end
 
 
@@ -1592,12 +1601,12 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 			------------------------------------------------
 			if (settings.font ~= prevFont or settings.size ~= prevSize) then
 
-				baseline, descent, ascent = getFontAscent(baselineCache, settings.font, settings.size)
+				ascent, descent = getFontAscent(baselineCache, settings.font, settings.size)
 				prevFont = settings.font
 				prevSize = settings.size
 			end
 			
-			baseline, descent, ascent = getFontAscent(baselineCache, settings.font, settings.size)
+			ascent, descent = getFontAscent(baselineCache, settings.font, settings.size)
 			
 		end
 
@@ -1838,7 +1847,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 					settings.currentSpaceBefore = 0
 				end
 
-				-- ALIGN TOP OF TEXT FRAME TO CAP HEIGHT!!!
+				-- ALIGN TOP OF TEXT FRAME TO ASCENT, NOT CAP HEIGHT
 				-- If this is the first line in the block of text, DON'T apply the space before settings
 				-- Tell the function which called this to raise the entire block to the cap-height
 				-- of the first line.
@@ -1846,7 +1855,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 				renderXMLvars.fontInfo = fontMetrics.getMetrics(settings.font)
 				local currentLineHeight = lineHeight
 
-				baseline, descent, ascent = getFontAscent(baselineCache, settings.font, settings.size)
+				ascent, descent = getFontAscent(baselineCache, settings.font, settings.size)
 
 
 				-- Width of the text column (not including indents which are paragraph based)
@@ -2052,7 +2061,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 								return {}
 							end
 							
-							baseline, descent, ascent = getFontAscent(baselineCache, settings.font, settings.size)
+							ascent, descent = getFontAscent(baselineCache, settings.font, settings.size)
 
 							-- If we're at the very first line of a text block, these
 							-- start at the Ascent, following InDesign defaults.
@@ -2071,7 +2080,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 							------------------------------------------------
 							if (settings.font ~= prevFont or settings.size ~= prevSize) then
 
-								baseline, descent, ascent = getFontAscent(baselineCache, settings.font, settings.size)
+								ascent, descent = getFontAscent(baselineCache, settings.font, settings.size)
 
 								prevFont = settings.font
 								prevSize = settings.size
@@ -2082,7 +2091,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 							-- IF this is the first line of the text box, figure out the corrections
 							-- to position the ENTIRE box properly (yAdjustment).
 							-- The current line height is NOT the leading/lineheight as with other lines,
-							-- since the box should start at the Cap Height (ascender).
+							-- since the box should start at the ascender (NOT CAP HEIGHT).
 
 							------
 							-- Calc the adjustment so we position text at its baseline, not top-left corner
@@ -2203,7 +2212,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 									lineCount = lineCount + 1
 		
 									if (not yAdjustment or yAdjustment == 0) then
-										yAdjustment = ( (settings.size / renderXMLvars.fontInfo.sampledFontSize ) * renderXMLvars.fontInfo.textHeight)- newDisplayLineGroup.height
+										yAdjustment = GetYAdjustment (newDisplayLineText, cachedItem.font)
 									end
 
 
@@ -2489,8 +2498,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 														-- Not predictable! So, we capture the height of the first line, and that is the basis of
 														-- our y adjustment for the entire block, to position it correctly.
 														if (not yAdjustment or yAdjustment == 0) then
-															--yAdjustment = (settings.size * renderXMLvars.fontInfo.ascent )- newDisplayLineGroup.height
-															yAdjustment = ( (settings.size / renderXMLvars.fontInfo.sampledFontSize ) * renderXMLvars.fontInfo.textHeight)- newDisplayLineGroup.height
+															yAdjustment = GetYAdjustment (newDisplayLineText, settings.font)
 														end
 
 
@@ -2825,8 +2833,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 									-- Since line heights are not predictable, we capture the yAdjustment based on
 									-- the actual height the first rendered line of text
 									if (not yAdjustment or yAdjustment == 0) then
-										--yAdjustment = (settings.size * renderXMLvars.fontInfo.ascent )- newDisplayLineGroup.height
-										yAdjustment = ( (settings.size / renderXMLvars.fontInfo.sampledFontSize ) * renderXMLvars.fontInfo.textHeight)- newDisplayLineGroup.height
+										yAdjustment = GetYAdjustment (newDisplayLineText, settings.font)
 									end
 
 									createLinkingBox(newDisplayLineGroup, newDisplayLineText, currentLine, {1,0,0,0.3})
@@ -3328,7 +3335,11 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 	-- Anchor the text block TOP-LEFT by default
 	-----------------------------
 	renderedTextblock.anchorChildren = false
-	renderedTextblock.yAdjustment = renderedTextblock.contentBounds.yMin
+	
+	--renderedTextblock.yAdjustment = renderedTextblock.contentBounds.yMin
+	
+	renderedTextblock.yAdjustment = yAdjustment
+	
 	renderedTextblock.anchorChildren = true
 	renderedTextblock.anchorX, renderedTextblock.anchorY = 0,0
 	
@@ -3356,7 +3367,11 @@ T.clearAllCaches = clearAllCaches
 T.fitBlockToHeight = fitBlockToHeight
 
 -- OPEN CACHE DATABASE
-openCacheDB()
+-- NO, don't open the cache here.
+-- If we delete the cache file later in the main.lua (when clearing caches), we set T.db
+-- but the delete cache function isn't smart enough to clear the T.db, so it call goes kablooey.
+-- INSTEAD, if the cache isn't open, it will be automatically opened, so no worries.
+--openCacheDB()
 
 if (not T.addedCloseDatabaseFunction) then
 	Runtime:addEventListener( "system", closeDB )

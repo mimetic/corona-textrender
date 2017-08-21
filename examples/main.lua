@@ -223,7 +223,7 @@ local options = {
 local textblock = textblock:fitBlockToHeight( options )
 local yAdjustment = textblock.yAdjustment
 textblock.x = x
-textblock.y = y
+textblock.y = y + yAdjustment
 
 if (testCacheSpeed) then
 	-- Remove for testing below, but now it is cached
