@@ -3200,6 +3200,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 							end
 
 							local e = renderParsedText(element, element._tag, element._attr, parseDepth, stacks)
+							renderXMLresult:insert(e)
 							e.anchorX, e.anchorY = 0, 0
 
 							-- Restore settings of parent element, saved above.
@@ -3213,6 +3214,7 @@ local function autoWrappedText(text, font, size, lineHeight, color, width, align
 --print ("lineY", lineY)
 							local saveStyleSettings = getAllStyleSettings()
 							local e = renderParsedElement(n, element, tag, attr)
+							renderXMLresult:insert(e)
 							e.anchorX, e.anchorY = 0, 0
 							setStyleSettings(saveStyleSettings)
 						end
